@@ -1,10 +1,12 @@
 package com.btw.app.ui.setup
 
 import android.app.Activity
+import android.bluetooth.BluetoothDevice
 import android.companion.AssociationRequest
 import android.companion.BluetoothDeviceFilter
 import android.companion.CompanionDeviceManager
 import android.content.IntentSender
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,8 +36,18 @@ fun PairVehicleScreen(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val device = result.data
-                ?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+            val data = result.data ?: return@rememberLauncherForActivityResult
+            // API 33+ returns AssociationInfo; below that returns BluetoothDevice directly
+            @Suppress("DEPRECATION")
+            val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val assoc = data.getParcelableExtra(
+                    CompanionDeviceManager.EXTRA_ASSOCIATION,
+                    android.companion.AssociationInfo::class.java
+                )
+                assoc?.associatedDevice?.bluetoothDevice
+            } else {
+                data.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+            }
             if (device != null) {
                 viewModel.onDevicePaired(device)
                 onVehiclePaired()

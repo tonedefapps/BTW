@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -69,18 +70,20 @@ class BtwMonitorService : Service(), SensorEventListener {
 
     private val bluetoothReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            val device = intent.bluetoothDevice() ?: return
             when (intent.action) {
-                BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    device?.address?.let { onVehicleConnected(it) }
-                }
-                BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    device?.address?.let { onVehicleDisconnected(it) }
-                }
+                BluetoothDevice.ACTION_ACL_CONNECTED -> onVehicleConnected(device.address)
+                BluetoothDevice.ACTION_ACL_DISCONNECTED -> onVehicleDisconnected(device.address)
             }
         }
     }
+
+    @Suppress("DEPRECATION")
+    private fun Intent.bluetoothDevice(): BluetoothDevice? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+        else
+            getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
 
     override fun onCreate() {
         super.onCreate()

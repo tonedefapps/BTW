@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  btw wordmark placeholder — three dots arranged as ellipsis in sky color.
+  Replace before release with a proper icon.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Dot 1 -->
+    <path
+        android:fillColor="#7BB8D4"
+        android:pathData="M34,54 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <!-- Dot 2 -->
+    <path
+        android:fillColor="#7BB8D4"
+        android:pathData="M54,54 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <!-- Dot 3 -->
+    <path
+        android:fillColor="#EAF4FB"
+        android:pathData="M74,54 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+</vector>
