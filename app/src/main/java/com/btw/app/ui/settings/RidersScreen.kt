@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.btw.app.domain.model.Rider
 import com.btw.app.domain.model.RiderType
-import com.btw.app.ui.onboarding.DmSans
+import com.btw.app.ui.theme.DmSans
 import com.btw.app.ui.theme.*
 
 @Composable

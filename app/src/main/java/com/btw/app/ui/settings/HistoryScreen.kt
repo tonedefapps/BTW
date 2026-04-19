@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.btw.app.domain.model.AlertEvent
 import com.btw.app.domain.model.AlertOutcome
-import com.btw.app.ui.onboarding.DmSans
+import com.btw.app.ui.theme.DmSans
 import com.btw.app.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*

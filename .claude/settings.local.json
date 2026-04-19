@@ -5,7 +5,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(gh repo *)",
-      "Bash(brew list *)"
+      "Bash(brew list *)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb shell *)",
+      "Bash(chmod +x /Users/scottfowler/btw/build.sh)",
+      "Bash(git -C /Users/scottfowler/btw add .)",
+      "Bash(git -C /Users/scottfowler/btw commit -m ' *)"
     ]
   }
 }
