@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.work.WorkManager
 import com.btw.app.data.local.BtwDatabase
 import com.btw.app.data.local.dao.AlertDao
+import com.btw.app.data.local.dao.HandoffDao
+import com.btw.app.data.local.dao.LocationDao
 import com.btw.app.data.local.dao.RiderDao
 import com.btw.app.data.local.dao.VehicleDao
 import com.btw.app.data.preferences.BtwPreferences
@@ -30,6 +32,8 @@ object DatabaseModule {
     @Provides fun provideRiderDao(db: BtwDatabase): RiderDao = db.riderDao()
     @Provides fun provideVehicleDao(db: BtwDatabase): VehicleDao = db.vehicleDao()
     @Provides fun provideAlertDao(db: BtwDatabase): AlertDao = db.alertDao()
+    @Provides fun provideLocationDao(db: BtwDatabase): LocationDao = db.locationDao()
+    @Provides fun provideHandoffDao(db: BtwDatabase): HandoffDao = db.handoffDao()
 
     @Provides
     @Singleton

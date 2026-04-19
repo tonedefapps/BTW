@@ -2,9 +2,13 @@ package com.btw.app.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.btw.app.ui.handoff.HandoffContactsScreen
 import com.btw.app.ui.home.HomeScreen
+import com.btw.app.ui.locations.LocationsScreen
 import com.btw.app.ui.onboarding.OnboardingScreen
 import com.btw.app.ui.settings.HistoryScreen
 import com.btw.app.ui.settings.RidersScreen
@@ -46,9 +50,7 @@ fun BtwNavGraph(
         }
 
         composable(Screen.AlertPrefs.route) {
-            AlertPrefsScreen(
-                onContinue = { navController.navigate(Screen.SetupComplete.route) }
-            )
+            AlertPrefsScreen(onContinue = { navController.navigate(Screen.SetupComplete.route) })
         }
 
         composable(Screen.SetupComplete.route) {
@@ -78,7 +80,26 @@ fun BtwNavGraph(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToLocations = { navController.navigate(Screen.Locations.route) },
+                onNavigateToHandoff = { riderId -> navController.navigate(Screen.Handoff.route(riderId)) }
+            )
+        }
+
+        composable(Screen.Locations.route) {
+            LocationsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.Handoff.route,
+            arguments = listOf(navArgument("riderId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val riderId = backStackEntry.arguments?.getLong("riderId") ?: -1L
+            HandoffContactsScreen(
+                riderId = riderId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

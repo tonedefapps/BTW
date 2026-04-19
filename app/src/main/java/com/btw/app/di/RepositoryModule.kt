@@ -23,4 +23,10 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
+
+    @Binds @Singleton
+    abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
+
+    @Binds @Singleton
+    abstract fun bindHandoffRepository(impl: HandoffRepositoryImpl): HandoffRepository
 }

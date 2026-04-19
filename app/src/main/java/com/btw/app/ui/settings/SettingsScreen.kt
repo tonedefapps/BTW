@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,9 +19,12 @@ import com.btw.app.ui.theme.*
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToLocations: () -> Unit = {},
+    onNavigateToHandoff: (Long) -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val prefs by viewModel.prefs.collectAsState()
+    val riders by viewModel.riders.collectAsState()
 
     Column(
         modifier = Modifier
@@ -70,6 +75,23 @@ fun SettingsScreen(
         EscalationDetail(step = 2, label = "persistent alert", seconds = prefs.step2DelaySeconds)
         EscalationDetail(step = 3, label = "sms emergency contact", seconds = prefs.step3DelaySeconds)
         EscalationDetail(step = 4, label = "one-tap 911", seconds = prefs.step4DelaySeconds)
+
+        Spacer(modifier = Modifier.height(24.dp))
+        SectionLabel("locations")
+        NavRow(label = "manage saved locations", onClick = onNavigateToLocations)
+
+        Spacer(modifier = Modifier.height(24.dp))
+        SectionLabel("handoff")
+        if (riders.isEmpty()) {
+            Text("add a rider first to configure handoff", style = MaterialTheme.typography.bodySmall, color = Depth)
+        } else {
+            riders.forEach { rider ->
+                NavRow(
+                    label = "${rider.emoji.ifBlank { "" }} ${rider.name} — contacts & pickup windows".trim(),
+                    onClick = { onNavigateToHandoff(rider.id) }
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         SectionLabel("emergency contact")
@@ -126,6 +148,21 @@ private fun SectionLabel(text: String) {
         color = Sky,
         modifier = Modifier.padding(bottom = 12.dp)
     )
+}
+
+@Composable
+private fun NavRow(label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = Air)
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Sky)
+    }
 }
 
 @Composable

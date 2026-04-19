@@ -10,4 +10,10 @@ sealed class Screen(val route: String) {
     object Riders : Screen("riders")
     object History : Screen("history")
     object Settings : Screen("settings")
+    object Locations : Screen("locations")
+
+    // riderId is a required nav arg
+    object Handoff : Screen("handoff/{riderId}") {
+        fun route(riderId: Long) = "handoff/$riderId"
+    }
 }

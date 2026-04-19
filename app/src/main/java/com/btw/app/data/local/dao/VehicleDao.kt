@@ -9,6 +9,9 @@ interface VehicleDao {
     @Query("SELECT * FROM vehicles ORDER BY isPrimary DESC, lastSeenAt DESC")
     fun getAllVehicles(): Flow<List<VehicleEntity>>
 
+    @Query("SELECT * FROM vehicles ORDER BY isPrimary DESC, lastSeenAt DESC")
+    suspend fun getAllVehiclesList(): List<VehicleEntity>
+
     @Query("SELECT * FROM vehicles WHERE id = :id")
     suspend fun getVehicleById(id: Long): VehicleEntity?
 
