@@ -175,11 +175,9 @@ private fun PremiumExplainerPage(onContinue: () -> Unit) {
 
         Spacer(Modifier.height(20.dp))
 
-        BtwSectionHeader("premium — notifies others too")
+        BtwSectionHeader("premium — when you need backup")
         BtwCard {
-            BtwCardValueRow(label = "sms your emergency contact", value = "★")
-            BtwRowDivider()
-            BtwCardValueRow(label = "handoff / proxy pickup alerts", value = "★")
+            BtwCardValueRow(label = "backup pickup coordination", value = "★")
             BtwRowDivider()
             BtwCardValueRow(label = "configurable escalation timers", value = "★")
         }

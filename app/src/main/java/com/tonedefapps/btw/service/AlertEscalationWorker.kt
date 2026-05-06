@@ -4,7 +4,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.telephony.SmsManager
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
@@ -13,7 +12,6 @@ import com.tonedefapps.btw.R
 import com.tonedefapps.btw.data.local.BtwDatabase
 import com.tonedefapps.btw.data.preferences.BtwPreferences
 import com.tonedefapps.btw.domain.model.AlertOutcome
-import com.tonedefapps.btw.domain.model.FinalEscalationAction
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -34,9 +32,6 @@ class AlertEscalationWorker @AssistedInject constructor(
         val prefs = preferences.alertPreferences.first()
         val multiplier = if (prefs.hotDayModeEnabled || autoHotDay) HOT_DAY_MULTIPLIER else 1f
 
-        // Step 3 (SMS) requires premium — stop escalation silently if not subscribed
-        if (step >= 3 && !prefs.isPremium) return Result.success()
-
         when (step) {
             1 -> {
                 showGentleNotification(alertId)
@@ -44,17 +39,6 @@ class AlertEscalationWorker @AssistedInject constructor(
             }
             2 -> {
                 showPersistentAlert(alertId)
-                scheduleNextStep(3, alertId, (prefs.step3DelaySeconds * multiplier).toLong(), autoHotDay)
-            }
-            3 -> {
-                sendEmergencySms(prefs.emergencyContactPhone, alertId)
-                database.alertDao().updateOutcome(alertId, AlertOutcome.ESCALATED_SMS.name, System.currentTimeMillis())
-                when (prefs.finalEscalationAction) {
-                    FinalEscalationAction.RESEND_SMS ->
-                        scheduleNextStep(3, alertId, (prefs.step3DelaySeconds * multiplier).toLong(), autoHotDay)
-                    FinalEscalationAction.REPEAT_ALERT ->
-                        scheduleNextStep(2, alertId, (prefs.step2DelaySeconds * multiplier).toLong(), autoHotDay)
-                }
             }
         }
         return Result.success()
@@ -92,18 +76,6 @@ class AlertEscalationWorker @AssistedInject constructor(
             .setFullScreenIntent(openIntent, true)
             .build()
         nm.notify(BtwMonitorService.NOTIFICATION_ID_ALERT, notification)
-    }
-
-    private fun sendEmergencySms(phone: String, alertId: Long) {
-        if (phone.isBlank()) return
-        try {
-            val sms = applicationContext.getSystemService(SmsManager::class.java)
-            sms?.sendTextMessage(
-                phone, null,
-                "btw — someone may still be in the vehicle. Please check immediately.",
-                null, null
-            )
-        } catch (_: Exception) {}
     }
 
     private fun openAppIntent(alertId: Long) = PendingIntent.getActivity(
