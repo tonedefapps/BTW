@@ -1,5 +1,6 @@
 package com.tonedefapps.btw.ui.setup
 
+import android.Manifest
 import android.app.Activity
 import android.bluetooth.BluetoothDevice
 import android.companion.AssociationRequest
@@ -19,10 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.tonedefapps.btw.ui.onboarding.BtwButton
 import com.tonedefapps.btw.ui.onboarding.Wordmark
 import com.tonedefapps.btw.ui.theme.*
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PairVehicleScreen(
     onVehiclePaired: () -> Unit,
@@ -55,20 +59,49 @@ fun PairVehicleScreen(
         }
     }
 
-    fun startPairing() {
+    val btPermissions = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        else emptyList()
+    }
+    val btPermissionsState = rememberMultiplePermissionsState(btPermissions)
+    var pendingScan by remember { mutableStateOf(false) }
+
+    fun doScan() {
         val cdm = context.getSystemService(CompanionDeviceManager::class.java)
         val request = AssociationRequest.Builder()
             .addDeviceFilter(BluetoothDeviceFilter.Builder().build())
             .setSingleDevice(false)
             .build()
-        cdm.associate(request, object : CompanionDeviceManager.Callback() {
-            override fun onDeviceFound(chooserLauncher: IntentSender) {
-                pairingLauncher.launch(IntentSenderRequest.Builder(chooserLauncher).build())
-            }
-            override fun onFailure(error: CharSequence?) {
-                viewModel.onPairingFailed()
-            }
-        }, null)
+        try {
+            cdm.associate(request, object : CompanionDeviceManager.Callback() {
+                @Suppress("OVERRIDE_DEPRECATION")
+                override fun onDeviceFound(chooserLauncher: IntentSender) {
+                    pairingLauncher.launch(IntentSenderRequest.Builder(chooserLauncher).build())
+                }
+                override fun onFailure(error: CharSequence?) {
+                    viewModel.onPairingFailed()
+                }
+            }, null)
+        } catch (_: SecurityException) {
+            viewModel.onPairingFailed()
+        }
+    }
+
+    fun startPairing() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !btPermissionsState.allPermissionsGranted) {
+            pendingScan = true
+            btPermissionsState.launchMultiplePermissionRequest()
+        } else {
+            doScan()
+        }
+    }
+
+    LaunchedEffect(pendingScan, btPermissionsState.allPermissionsGranted) {
+        if (pendingScan && btPermissionsState.allPermissionsGranted) {
+            pendingScan = false
+            doScan()
+        }
     }
 
     Box(

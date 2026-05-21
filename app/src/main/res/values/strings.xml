@@ -3,6 +3,7 @@
     <string name="app_name">btw</string>
     <string name="notification_channel_monitor">btw monitor</string>
     <string name="notification_channel_alert">btw alert</string>
+    <string name="notification_channel_nudge">btw nudge</string>
     <string name="notification_monitor_title">btw...</string>
     <string name="notification_monitor_text">on it.</string>
     <string name="ok">ok</string>

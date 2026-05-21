@@ -26,4 +26,10 @@ class RiderRepositoryImpl @Inject constructor(
 
     override suspend fun deleteRider(id: Long) =
         dao.deleteById(id)
+
+    override suspend fun pauseRider(id: Long, until: Long) =
+        dao.pauseRider(id, until)
+
+    override suspend fun unpauseRider(id: Long) =
+        dao.unpauseRider(id)
 }

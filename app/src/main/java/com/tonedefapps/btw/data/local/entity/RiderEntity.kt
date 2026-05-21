@@ -11,14 +11,16 @@ data class RiderEntity(
     val name: String,
     val type: String,
     val emoji: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val pausedUntil: Long? = null
 ) {
     fun toDomain() = Rider(
         id = id,
         name = name,
         type = RiderType.valueOf(type),
         emoji = emoji,
-        createdAt = createdAt
+        createdAt = createdAt,
+        pausedUntil = pausedUntil
     )
 
     companion object {
@@ -27,7 +29,8 @@ data class RiderEntity(
             name = rider.name,
             type = rider.type.name,
             emoji = rider.emoji,
-            createdAt = rider.createdAt
+            createdAt = rider.createdAt,
+            pausedUntil = rider.pausedUntil
         )
     }
 }

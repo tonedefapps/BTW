@@ -5,5 +5,9 @@ data class Rider(
     val name: String,
     val type: RiderType,
     val emoji: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val pausedUntil: Long? = null
 )
+
+fun Rider.isManuallyPaused(now: Long = System.currentTimeMillis()): Boolean =
+    pausedUntil != null && pausedUntil > now

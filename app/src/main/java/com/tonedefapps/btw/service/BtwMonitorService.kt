@@ -24,6 +24,8 @@ import com.tonedefapps.btw.data.local.BtwDatabase
 import com.tonedefapps.btw.domain.model.AlertEvent
 import com.tonedefapps.btw.domain.model.AlertOutcome
 import com.tonedefapps.btw.domain.model.HandoffEvent
+import com.tonedefapps.btw.domain.model.isActive
+import com.tonedefapps.btw.domain.model.isManuallyPaused
 import com.tonedefapps.btw.domain.monitor.MonitorStateHolder
 import com.tonedefapps.btw.domain.usecase.CheckExpectedPickupUseCase
 import com.tonedefapps.btw.domain.usecase.GetNearbyLocationUseCase
@@ -55,6 +57,9 @@ class BtwMonitorService : Service(), SensorEventListener {
     private var currentLocation: Location? = null
     private var connectedVehicleAddress: String? = null
     private var connectedVehicleId: Long = -1L
+
+    // Suppress repeat nudges for the same rider on the same calendar day
+    private val nudgedDates = mutableMapOf<Long, String>()
 
     // ── Triple-trigger flags ─────────────────────────────────────────────────
     private var isMotionConsistentWithDriving = false
@@ -109,6 +114,16 @@ class BtwMonitorService : Service(), SensorEventListener {
         when (intent?.action) {
             ACTION_ACKNOWLEDGE_SAFE -> handleAcknowledgeSafe()
             ACTION_ACKNOWLEDGE_GOING_BACK -> handleAcknowledgeGoingBack()
+            ACTION_UNPAUSE_RIDER -> {
+                val riderId = intent.getLongExtra(EXTRA_RIDER_ID, -1L)
+                if (riderId >= 0) {
+                    serviceScope.launch {
+                        database.riderDao().unpauseRider(riderId)
+                        getSystemService(NotificationManager::class.java)
+                            .cancel(NOTIFICATION_ID_NUDGE_BASE + riderId.toInt())
+                    }
+                }
+            }
             ACTION_STOP -> stopSelf()
             else -> {
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -153,6 +168,18 @@ class BtwMonitorService : Service(), SensorEventListener {
             stopAccelerometer()
             setLocationMode(LocationMode.IN_VEHICLE)
             monitorStateHolder.onVehicleConnected()
+
+            // Nudge for any manually-paused riders — once per rider per calendar day
+            val now = System.currentTimeMillis()
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                .format(java.util.Date(now))
+            database.riderDao().getAllRidersList()
+                .filter { it.pausedUntil != null && it.pausedUntil > now }
+                .filter { nudgedDates[it.id] != today }
+                .forEach {
+                    nudgedDates[it.id] = today
+                    showPausedRiderNudge(it.id, it.name)
+                }
         }
     }
 
@@ -173,10 +200,7 @@ class BtwMonitorService : Service(), SensorEventListener {
         locationMode = mode
         fusedLocationClient.removeLocationUpdates(locationCallback)
         val request = when (mode) {
-            LocationMode.OFF -> {
-                // Already removed updates above; nothing to schedule
-                return
-            }
+            LocationMode.OFF -> return
             LocationMode.IN_VEHICLE -> LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 60_000L)
                 .setMinUpdateDistanceMeters(20f)
                 .build()
@@ -196,7 +220,6 @@ class BtwMonitorService : Service(), SensorEventListener {
     private fun startAccelerometerForAlertWindow() {
         accelerometer ?: return
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
-        // Auto-unregister after 10 minutes — if alert hasn't fired by then, phone hasn't moved
         accelerometerJob?.cancel()
         accelerometerJob = serviceScope.launch {
             delay(10 * 60 * 1000L)
@@ -214,7 +237,6 @@ class BtwMonitorService : Service(), SensorEventListener {
     private fun handleLocationUpdate(location: Location) {
         currentLocation = location
 
-        // Update the parked-location and vehicle DB record while BT is connected
         if (!btDisconnected && connectedVehicleId >= 0) {
             vehicleParkedLocation = location
             serviceScope.launch {
@@ -222,12 +244,10 @@ class BtwMonitorService : Service(), SensorEventListener {
             }
         }
 
-        // Check proximity to named saved locations for visit tracking
         serviceScope.launch {
             val nearby = getNearbyLocation(location.latitude, location.longitude, radiusMeters = 80f)
             if (nearby != null) {
                 if (nearby.id != currentSavedLocationId) {
-                    // Entered a new saved location
                     currentSavedLocationId = nearby.id
                     dwellStartMs = System.currentTimeMillis()
                     recordLocationVisit(nearby.id)
@@ -237,7 +257,6 @@ class BtwMonitorService : Service(), SensorEventListener {
             }
         }
 
-        // Check displacement from parked vehicle (50ft ≈ 15.24m)
         val parked = vehicleParkedLocation
         if (btDisconnected && parked != null) {
             movedAwayFromVehicle = location.distanceTo(parked) > DISTANCE_THRESHOLD_METERS
@@ -269,17 +288,27 @@ class BtwMonitorService : Service(), SensorEventListener {
 
     private fun triggerChildPetAlert() {
         serviceScope.launch {
-            val riders = database.riderDao().getAllRidersList()
-            if (riders.isEmpty()) return@launch
+            val allRiders = database.riderDao().getAllRidersList()
+            if (allRiders.isEmpty()) return@launch
+            val schedules = database.riderScheduleDao().getAllSchedulesList()
+            val now = System.currentTimeMillis()
+            val activeRiders = allRiders.filter { riderEntity ->
+                val rider = riderEntity.toDomain()
+                rider.isActive(schedules.firstOrNull { it.riderId == riderEntity.id }?.toDomain(), now)
+                    && !rider.isManuallyPaused(now)
+            }
+            if (activeRiders.isEmpty()) return@launch  // all paused — skip alert
+
+            val rider = activeRiders.first()
             val vehicle = database.vehicleDao().getByBluetoothAddress(connectedVehicleAddress ?: return@launch)
 
             val alertId = database.alertDao().insert(
                 com.tonedefapps.btw.data.local.entity.AlertEntity(
-                    riderId = riders.first().id,
-                    riderName = riders.first().name,
+                    riderId = rider.id,
+                    riderName = rider.name,
                     vehicleId = vehicle?.id ?: -1L,
                     vehicleName = vehicle?.name ?: "vehicle",
-                    triggeredAt = System.currentTimeMillis(),
+                    triggeredAt = now,
                     acknowledgedAt = null,
                     outcome = AlertOutcome.PENDING.name,
                     latitude = vehicleParkedLocation?.latitude ?: 0.0,
@@ -312,6 +341,29 @@ class BtwMonitorService : Service(), SensorEventListener {
         return tenths / 10f
     }
 
+    // ── Paused-rider nudge ───────────────────────────────────────────────────
+
+    private fun showPausedRiderNudge(riderId: Long, riderName: String) {
+        val unpauseIntent = Intent(this, BtwMonitorService::class.java).apply {
+            action = ACTION_UNPAUSE_RIDER
+            putExtra(EXTRA_RIDER_ID, riderId)
+        }
+        val unpausePi = PendingIntent.getService(
+            this, riderId.toInt(), unpauseIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, CHANNEL_NUDGE)
+            .setContentTitle("$riderName is paused")
+            .setContentText("is $riderName with you today?")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .addAction(0, "with me", unpausePi)
+            .build()
+        getSystemService(NotificationManager::class.java)
+            .notify(NOTIFICATION_ID_NUDGE_BASE + riderId.toInt(), notification)
+    }
+
     // ── Handoff detection ────────────────────────────────────────────────────
 
     private fun checkHandoffWindows() {
@@ -337,6 +389,7 @@ class BtwMonitorService : Service(), SensorEventListener {
 
     private fun handleAcknowledgeSafe() {
         workManager.cancelAllWorkByTag(TAG_ESCALATION)
+        getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID_ALERT)
         alertTriggered = false
         stopAccelerometer()
         setLocationMode(LocationMode.OFF)
@@ -350,6 +403,7 @@ class BtwMonitorService : Service(), SensorEventListener {
 
     private fun handleAcknowledgeGoingBack() {
         workManager.cancelAllWorkByTag(TAG_ESCALATION)
+        getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID_ALERT)
         alertTriggered = false
         stopAccelerometer()
         setLocationMode(LocationMode.OFF)
@@ -383,20 +437,28 @@ class BtwMonitorService : Service(), SensorEventListener {
             NotificationChannel(CHANNEL_ALERT, getString(R.string.notification_channel_alert), NotificationManager.IMPORTANCE_HIGH)
                 .apply { enableVibration(true) }
         )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_NUDGE, getString(R.string.notification_channel_nudge), NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { setShowBadge(false) }
+        )
     }
 
     companion object {
         const val CHANNEL_MONITOR = "btw_monitor"
         const val CHANNEL_ALERT = "btw_alert"
+        const val CHANNEL_NUDGE = "btw_nudge"
         const val NOTIFICATION_ID_MONITOR = 1001
         const val NOTIFICATION_ID_ALERT = 1002
+        const val NOTIFICATION_ID_NUDGE_BASE = 3000
         const val ACTION_ACKNOWLEDGE_SAFE = "com.tonedefapps.btw.ACTION_SAFE"
         const val ACTION_ACKNOWLEDGE_GOING_BACK = "com.tonedefapps.btw.ACTION_GOING_BACK"
+        const val ACTION_UNPAUSE_RIDER = "com.tonedefapps.btw.ACTION_UNPAUSE_RIDER"
         const val ACTION_STOP = "com.tonedefapps.btw.ACTION_STOP"
+        const val EXTRA_RIDER_ID = "rider_id"
         const val TAG_ESCALATION = "btw_escalation"
         const val ESCALATION_WORK_NAME = "btw_escalation_ladder"
-        private const val DISTANCE_THRESHOLD_METERS = 15.24f  // 50 feet
+        private const val DISTANCE_THRESHOLD_METERS = 15.24f
         private const val DRIVING_MOTION_THRESHOLD = 12f
-        private const val HOT_BATTERY_TEMP_C = 36f  // ~97°F battery temp reliably indicates hot environment
+        private const val HOT_BATTERY_TEMP_C = 36f
     }
 }

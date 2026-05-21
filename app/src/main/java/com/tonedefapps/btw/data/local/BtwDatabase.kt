@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.tonedefapps.btw.data.local.dao.*
 import com.tonedefapps.btw.data.local.entity.*
+import com.tonedefapps.btw.data.local.dao.RiderScheduleDao
+import com.tonedefapps.btw.data.local.entity.RiderScheduleEntity
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
@@ -19,8 +21,9 @@ import net.sqlcipher.database.SupportFactory
         HandoffContactEntity::class,
         PickupWindowEntity::class,
         HandoffEventEntity::class,
+        RiderScheduleEntity::class,
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class BtwDatabase : RoomDatabase() {
@@ -29,6 +32,7 @@ abstract class BtwDatabase : RoomDatabase() {
     abstract fun alertDao(): AlertDao
     abstract fun locationDao(): LocationDao
     abstract fun handoffDao(): HandoffDao
+    abstract fun riderScheduleDao(): RiderScheduleDao
 
     companion object {
         private const val DB_NAME = "btw.db"

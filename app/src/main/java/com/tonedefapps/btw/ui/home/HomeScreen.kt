@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.tonedefapps.btw.domain.model.AlertOutcome
+import com.tonedefapps.btw.domain.model.Rider
 import com.tonedefapps.btw.domain.model.TripState
 import com.tonedefapps.btw.ui.onboarding.Wordmark
 import com.tonedefapps.btw.ui.theme.*
@@ -54,15 +56,19 @@ fun HomeScreen(
     val hasLocation = permissionsState.permissions.any {
         it.permission == Manifest.permission.ACCESS_FINE_LOCATION && it.status.isGranted
     }
+    val hasBluetooth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        permissionsState.permissions.any {
+            it.permission == Manifest.permission.BLUETOOTH_CONNECT && it.status.isGranted
+        }
+    } else true
 
     LaunchedEffect(Unit) {
         if (!permissionsState.allPermissionsGranted) permissionsState.launchMultiplePermissionRequest()
     }
-    LaunchedEffect(hasLocation) {
-        if (hasLocation) viewModel.startMonitor()
+    LaunchedEffect(hasLocation, hasBluetooth) {
+        if (hasLocation && hasBluetooth) viewModel.startMonitor()
     }
 
-    // Alert state gets a red-tinted background
     val bgColor = if (uiState.tripState == TripState.ALERT_TRIGGERED) AlertRed.copy(alpha = 0.08f) else Ink
 
     Box(
@@ -72,7 +78,6 @@ fun HomeScreen(
             .windowInsetsPadding(WindowInsets.systemBars)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar — wordmark only, nav is in bottom bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -81,11 +86,14 @@ fun HomeScreen(
                 Wordmark()
             }
 
-            // Main content
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when (uiState.tripState) {
                     TripState.IDLE -> IdleState(uiState, onNavigateToRiders, onNavigateToSettings)
-                    TripState.IN_VEHICLE -> WatchingState(uiState)
+                    TripState.IN_VEHICLE -> WatchingState(
+                        uiState = uiState,
+                        onNavigateToRiders = onNavigateToRiders,
+                        onUnpauseRider = { viewModel.unpauseRider(it) }
+                    )
                     TripState.ALERT_TRIGGERED -> AlertState(
                         uiState = uiState,
                         onSafe = { viewModel.acknowledgeSafe(uiState.activeAlertId) },
@@ -135,7 +143,6 @@ private fun IdleState(
             )
         }
 
-        // Setup nudge cards
         if (uiState.riders.isEmpty() || uiState.connectedVehicle == null) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -162,7 +169,6 @@ private fun IdleState(
             }
         }
 
-        // Today's completed trips
         if (uiState.recentAlerts.isNotEmpty()) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -191,7 +197,11 @@ private fun IdleState(
 }
 
 @Composable
-private fun WatchingState(uiState: HomeUiState) {
+private fun WatchingState(
+    uiState: HomeUiState,
+    onNavigateToRiders: () -> Unit,
+    onUnpauseRider: (Long) -> Unit
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1.2f,
@@ -204,7 +214,6 @@ private fun WatchingState(uiState: HomeUiState) {
         label = "pulse_alpha"
     )
 
-    // Live elapsed timer
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -212,6 +221,8 @@ private fun WatchingState(uiState: HomeUiState) {
             now = System.currentTimeMillis()
         }
     }
+
+    val pauseDateFmt = remember { SimpleDateFormat("MMM d", Locale.getDefault()) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -226,47 +237,92 @@ private fun WatchingState(uiState: HomeUiState) {
             Box(modifier = Modifier.size(56.dp).background(SafeGreen, CircleShape))
         }
 
-        // Active watcher cards — one per rider
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            uiState.riders.forEach { rider ->
-                BtwCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "${rider.emoji.ifBlank { "" }} ${rider.name}".trim(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Air
-                            )
-                            uiState.connectedVehicle?.let {
-                                Text(
-                                    text = "via ${it.name}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Sky
-                                )
-                            }
-                        }
-                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            BtwStatusPill("in vehicle", SafeGreen)
-                            uiState.tripStartedAt?.let { startedAt ->
-                                val elapsedMin = ((now - startedAt) / 60_000).toInt()
-                                Text(
-                                    text = if (elapsedMin < 1) "just started" else "${elapsedMin}m",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Sky.copy(alpha = 0.7f)
-                                )
-                            }
-                        }
-                    }
+            uiState.activeRiders.forEach { rider ->
+                ActiveRiderCard(rider = rider, uiState = uiState, now = now)
+            }
+
+            if (uiState.pausedRiders.isNotEmpty()) {
+                uiState.pausedRiders.forEach { rider ->
+                    PausedRiderCard(
+                        rider = rider,
+                        pauseDateFmt = pauseDateFmt,
+                        onResume = { onUnpauseRider(rider.id) },
+                        onManage = onNavigateToRiders
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveRiderCard(rider: Rider, uiState: HomeUiState, now: Long) {
+    BtwCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "${rider.emoji.ifBlank { "" }} ${rider.name}".trim(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Air
+                )
+                uiState.connectedVehicle?.let {
+                    Text(text = "via ${it.name}", style = MaterialTheme.typography.bodySmall, color = Sky)
+                }
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                BtwStatusPill("in vehicle", SafeGreen)
+                uiState.tripStartedAt?.let { startedAt ->
+                    val elapsedMin = ((now - startedAt) / 60_000).toInt()
+                    Text(
+                        text = if (elapsedMin < 1) "just started" else "${elapsedMin}m",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Sky.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PausedRiderCard(
+    rider: Rider,
+    pauseDateFmt: SimpleDateFormat,
+    onResume: () -> Unit,
+    onManage: () -> Unit
+) {
+    BtwCard(
+        modifier = Modifier.clickable { onManage() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "${rider.emoji.ifBlank { "" }} ${rider.name}".trim(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Air.copy(alpha = 0.6f)
+                )
+                val untilLabel = rider.pausedUntil?.let { "paused · until ${pauseDateFmt.format(Date(it)).lowercase()}" }
+                    ?: "paused"
+                Text(text = untilLabel, style = MaterialTheme.typography.bodySmall, color = Sky.copy(alpha = 0.6f))
+            }
+            TextButton(onClick = onResume) {
+                Text("resume", color = Sky, fontSize = 13.sp, fontFamily = DmSans)
             }
         }
     }

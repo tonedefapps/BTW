@@ -23,4 +23,10 @@ interface RiderDao {
 
     @Query("DELETE FROM riders WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE riders SET pausedUntil = :until WHERE id = :id")
+    suspend fun pauseRider(id: Long, until: Long)
+
+    @Query("UPDATE riders SET pausedUntil = NULL WHERE id = :id")
+    suspend fun unpauseRider(id: Long)
 }

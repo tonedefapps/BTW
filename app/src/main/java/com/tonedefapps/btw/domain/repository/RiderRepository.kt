@@ -9,4 +9,6 @@ interface RiderRepository {
     suspend fun addRider(rider: Rider): Long
     suspend fun updateRider(rider: Rider)
     suspend fun deleteRider(id: Long)
+    suspend fun pauseRider(id: Long, until: Long)
+    suspend fun unpauseRider(id: Long)
 }
