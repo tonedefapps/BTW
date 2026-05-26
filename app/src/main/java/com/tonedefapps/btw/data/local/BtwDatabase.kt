@@ -23,7 +23,7 @@ import net.sqlcipher.database.SupportFactory
         HandoffEventEntity::class,
         RiderScheduleEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class BtwDatabase : RoomDatabase() {

@@ -42,4 +42,13 @@ class PairVehicleViewModel @Inject constructor(
     fun onPairingFailed() {
         _uiState.value = _uiState.value.copy(error = "couldn't find a device. try again.")
     }
+
+    fun addLocationOnlyVehicle(name: String) {
+        viewModelScope.launch {
+            vehicleRepository.addVehicle(
+                Vehicle(name = name.trim(), bluetoothAddress = null, isPrimary = true)
+            )
+            _uiState.value = _uiState.value.copy(pairedDeviceName = name.trim())
+        }
+    }
 }

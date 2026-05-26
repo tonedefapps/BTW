@@ -6,9 +6,12 @@ import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tonedefapps.btw.domain.model.*
+import com.tonedefapps.btw.domain.model.isLocationOnly
 import com.tonedefapps.btw.domain.monitor.MonitorStateHolder
 import com.tonedefapps.btw.domain.repository.AlertRepository
 import com.tonedefapps.btw.domain.repository.PreferencesRepository
+import com.tonedefapps.btw.domain.repository.RiderRepository
+import com.tonedefapps.btw.domain.repository.RiderScheduleRepository
 import com.tonedefapps.btw.domain.usecase.GetAlertHistoryUseCase
 import com.tonedefapps.btw.domain.usecase.GetRidersUseCase
 import com.tonedefapps.btw.domain.usecase.GetVehiclesUseCase
@@ -22,10 +25,14 @@ data class HomeUiState(
     val tripState: TripState = TripState.IDLE,
     val connectedVehicle: Vehicle? = null,
     val riders: List<Rider> = emptyList(),
+    val activeRiders: List<Rider> = emptyList(),
+    val pausedRiders: List<Rider> = emptyList(),
     val activeAlertId: Long = -1L,
     val activeRiderName: String = "",
     val recentAlerts: List<AlertEvent> = emptyList(),
-    val tripStartedAt: Long? = null
+    val tripStartedAt: Long? = null,
+    val hasLocationOnlyVehicle: Boolean = false,
+    val passiveWatchActive: Boolean = false
 )
 
 @HiltViewModel
@@ -36,6 +43,8 @@ class HomeViewModel @Inject constructor(
     private val alertRepository: AlertRepository,
     private val preferencesRepository: PreferencesRepository,
     private val monitorStateHolder: MonitorStateHolder,
+    private val riderRepository: RiderRepository,
+    private val riderScheduleRepository: RiderScheduleRepository,
     getAlertHistoryUseCase: GetAlertHistoryUseCase
 ) : AndroidViewModel(application) {
 
@@ -48,13 +57,25 @@ class HomeViewModel @Inject constructor(
         return cal.timeInMillis
     }
 
-    val uiState: StateFlow<HomeUiState> = combine(
+    private val ridersAndSchedules = combine(
         getRidersUseCase(),
+        riderScheduleRepository.getSchedules()
+    ) { riders, schedules -> riders to schedules }
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        ridersAndSchedules,
         getVehiclesUseCase(),
         monitorStateHolder.tripState,
         monitorStateHolder.activeAlertId,
-        combine(monitorStateHolder.tripStartedAt, getAlertHistoryUseCase()) { tripStart, history -> tripStart to history }
-    ) { riders, vehicles, tripState, activeAlertId, (tripStart, history) ->
+        combine(
+            monitorStateHolder.tripStartedAt,
+            monitorStateHolder.passiveWatchActive,
+            getAlertHistoryUseCase()
+        ) { tripStart, passiveWatch, history -> Triple(tripStart, passiveWatch, history) }
+    ) { (riders, schedules), vehicles, tripState, activeAlertId, (tripStart, passiveWatch, history) ->
+        val now = System.currentTimeMillis()
+        val activeRiders = riders.filter { it.isActive(schedules.firstOrNull { s -> s.riderId == it.id }, now) }
+        val pausedRiders = riders.filter { !it.isActive(schedules.firstOrNull { s -> s.riderId == it.id }, now) }
         val todayAlerts = history
             .filter { it.triggeredAt >= startOfToday && it.outcome != AlertOutcome.PENDING }
             .sortedByDescending { it.triggeredAt }
@@ -63,10 +84,14 @@ class HomeViewModel @Inject constructor(
             tripState = tripState,
             connectedVehicle = vehicles.firstOrNull { it.isPrimary },
             riders = riders,
+            activeRiders = activeRiders,
+            pausedRiders = pausedRiders,
             activeAlertId = activeAlertId,
-            activeRiderName = riders.firstOrNull()?.name ?: "",
+            activeRiderName = activeRiders.firstOrNull()?.name ?: riders.firstOrNull()?.name ?: "",
             recentAlerts = todayAlerts,
-            tripStartedAt = tripStart
+            tripStartedAt = tripStart,
+            hasLocationOnlyVehicle = vehicles.any { it.isLocationOnly },
+            passiveWatchActive = passiveWatch
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
@@ -79,17 +104,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun acknowledgeSafe(alertId: Long) {
+    fun acknowledgeSafe(@Suppress("UNUSED_PARAMETER") alertId: Long) {
         val intent = Intent(getApplication(), BtwMonitorService::class.java).apply {
             action = BtwMonitorService.ACTION_ACKNOWLEDGE_SAFE
         }
         getApplication<Application>().startService(intent)
     }
 
-    fun acknowledgeGoingBack(alertId: Long) {
+    fun acknowledgeGoingBack(@Suppress("UNUSED_PARAMETER") alertId: Long) {
         val intent = Intent(getApplication(), BtwMonitorService::class.java).apply {
             action = BtwMonitorService.ACTION_ACKNOWLEDGE_GOING_BACK
         }
         getApplication<Application>().startService(intent)
+    }
+
+    fun unpauseRider(riderId: Long) {
+        viewModelScope.launch { riderRepository.unpauseRider(riderId) }
     }
 }

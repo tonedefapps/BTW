@@ -35,6 +35,8 @@ fun PairVehicleScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    var showNoBtForm by remember { mutableStateOf(false) }
+    var noBtName by remember { mutableStateOf("") }
 
     val pairingLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -122,16 +124,19 @@ fun PairVehicleScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "pair your vehicle",
+                    text = if (showNoBtForm) "name your vehicle" else "pair your vehicle",
                     style = MaterialTheme.typography.displaySmall,
                     color = Air
                 )
                 Text(
-                    text = "btw watches for when your car's bluetooth disconnects. pair the audio system or hands-free kit.",
+                    text = if (showNoBtForm)
+                        "btw will watch for when you leave your saved parking spots."
+                    else
+                        "btw watches for when your car's bluetooth disconnects. pair the audio system or hands-free kit.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Sky
                 )
-                if (uiState.error != null) {
+                if (uiState.error != null && !showNoBtForm) {
                     Text(
                         text = uiState.error!!,
                         style = MaterialTheme.typography.bodySmall,
@@ -140,17 +145,42 @@ fun PairVehicleScreen(
                 }
                 if (uiState.pairedDeviceName != null) {
                     Text(
-                        text = "paired: ${uiState.pairedDeviceName}",
+                        text = "added: ${uiState.pairedDeviceName}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Sand
+                    )
+                }
+                if (showNoBtForm) {
+                    BtwTextField(
+                        value = noBtName,
+                        onValueChange = { noBtName = it },
+                        label = "vehicle name (e.g. ford f-150)"
                     )
                 }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BtwButton(text = "scan for vehicle", onClick = ::startPairing)
-                TextButton(onClick = onSkip) {
-                    Text("skip for now", color = Sky, style = MaterialTheme.typography.bodySmall)
+                if (showNoBtForm) {
+                    BtwButton(
+                        text = "add vehicle",
+                        onClick = {
+                            if (noBtName.isNotBlank()) {
+                                viewModel.addLocationOnlyVehicle(noBtName)
+                                onVehiclePaired()
+                            }
+                        }
+                    )
+                    TextButton(onClick = { showNoBtForm = false }) {
+                        Text("back", color = Sky, style = MaterialTheme.typography.bodySmall)
+                    }
+                } else {
+                    BtwButton(text = "scan for vehicle", onClick = ::startPairing)
+                    TextButton(onClick = { showNoBtForm = true }) {
+                        Text("my car doesn't have bluetooth", color = Sky, style = MaterialTheme.typography.bodySmall)
+                    }
+                    TextButton(onClick = onSkip) {
+                        Text("skip for now", color = Sky.copy(alpha = 0.5f), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }

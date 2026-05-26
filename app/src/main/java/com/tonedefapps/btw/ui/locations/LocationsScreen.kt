@@ -1,5 +1,6 @@
 package com.tonedefapps.btw.ui.locations
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -7,14 +8,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.location.LocationServices
 import com.tonedefapps.btw.domain.model.LocationSource
 import com.tonedefapps.btw.domain.model.SavedLocation
 import com.tonedefapps.btw.ui.theme.*
@@ -46,8 +50,12 @@ fun LocationsScreen(
         if (locations.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("no locations yet", style = MaterialTheme.typography.bodyMedium, color = Air)
-                    Text("add places where pickups are expected", style = MaterialTheme.typography.bodySmall, color = Sky)
+                    Text("no parking spots yet", style = MaterialTheme.typography.bodyMedium, color = Air)
+                    Text(
+                        "add the places you usually park — btw watches for when you leave",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Sky
+                    )
                 }
             }
         } else {
@@ -124,26 +132,53 @@ private fun ConfidencePill(confidence: Float) {
     }
 }
 
+@SuppressLint("MissingPermission")
 @Composable
 private fun AddLocationDialog(
     onDismiss: () -> Unit,
     onAdd: (String, String, Double, Double, Float) -> Unit
 ) {
+    val context = LocalContext.current
     var label by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("") }
     var latStr by remember { mutableStateOf("") }
     var lngStr by remember { mutableStateOf("") }
-    var radiusStr by remember { mutableStateOf("50") }
+    var radiusStr by remember { mutableStateOf("150") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Depth,
-        title = { Text("add location", color = Air, style = MaterialTheme.typography.titleLarge) },
+        title = { Text("add parking spot", color = Air, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BtwTextField(value = label, onValueChange = { label = it }, label = "label")
+                BtwTextField(value = label, onValueChange = { label = it }, label = "label (e.g. home, work)")
                 BtwTextField(value = emoji, onValueChange = { if (it.length <= 2) emoji = it }, label = "emoji (optional)")
-                BtwTextField(value = latStr, onValueChange = { latStr = it }, label = "latitude", keyboardType = KeyboardType.Decimal)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    BtwTextField(
+                        value = latStr,
+                        onValueChange = { latStr = it },
+                        label = "latitude",
+                        keyboardType = KeyboardType.Decimal,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = {
+                            LocationServices.getFusedLocationProviderClient(context)
+                                .lastLocation
+                                .addOnSuccessListener { loc ->
+                                    if (loc != null) {
+                                        latStr = "%.6f".format(loc.latitude)
+                                        lngStr = "%.6f".format(loc.longitude)
+                                    }
+                                }
+                        }
+                    ) {
+                        Icon(Icons.Outlined.MyLocation, contentDescription = "use current location", tint = Sky)
+                    }
+                }
                 BtwTextField(value = lngStr, onValueChange = { lngStr = it }, label = "longitude", keyboardType = KeyboardType.Decimal)
                 BtwTextField(value = radiusStr, onValueChange = { radiusStr = it }, label = "radius (metres)", keyboardType = KeyboardType.Number)
             }
@@ -152,7 +187,7 @@ private fun AddLocationDialog(
             TextButton(onClick = {
                 val lat = latStr.toDoubleOrNull() ?: return@TextButton
                 val lng = lngStr.toDoubleOrNull() ?: return@TextButton
-                val radius = radiusStr.toFloatOrNull() ?: 50f
+                val radius = radiusStr.toFloatOrNull() ?: 150f
                 if (label.isNotBlank()) onAdd(label.trim(), emoji.trim(), lat, lng, radius)
             }) { Text("add", color = Air) }
         },

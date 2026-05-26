@@ -31,6 +31,12 @@ class VehiclesViewModel @Inject constructor(
 
     fun onPairingFailed() { /* no-op — UI handles empty state */ }
 
+    fun addLocationOnlyVehicle(name: String) {
+        viewModelScope.launch {
+            vehicleRepository.addVehicle(Vehicle(name = name.trim(), bluetoothAddress = null, isPrimary = true))
+        }
+    }
+
     fun deleteVehicle(id: Long) {
         viewModelScope.launch { vehicleRepository.deleteVehicle(id) }
     }

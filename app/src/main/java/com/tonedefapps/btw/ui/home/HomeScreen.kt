@@ -112,38 +112,54 @@ private fun IdleState(
     onNavigateToRiders: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    val setupComplete = uiState.riders.isNotEmpty() && uiState.connectedVehicle != null
+    val hasVehicle = uiState.connectedVehicle != null
+    val setupComplete = uiState.riders.isNotEmpty() && hasVehicle
     val timeFmt = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+
+    // Status label for the current monitoring mode
+    val statusLabel = when {
+        uiState.passiveWatchActive -> "watching"
+        setupComplete && uiState.hasLocationOnlyVehicle -> "ready"
+        setupComplete -> "ready"
+        else -> "setup needed"
+    }
+    val readySubtext = when {
+        uiState.hasLocationOnlyVehicle ->
+            "monitoring starts automatically when you leave a saved parking spot"
+        else ->
+            "activates automatically when your car's bluetooth connects"
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.padding(horizontal = 24.dp)
     ) {
-        BtwStatusPill(if (setupComplete) "ready" else "setup needed", Sky)
+        BtwStatusPill(statusLabel, if (uiState.passiveWatchActive) SafeGreen else Sky)
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = if (setupComplete) "ready to watch" else "finish setup to start",
+                text = when {
+                    uiState.passiveWatchActive -> "watching for departure"
+                    setupComplete -> "ready to watch"
+                    else -> "finish setup to start"
+                },
                 style = MaterialTheme.typography.headlineMedium,
                 color = Air,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = if (setupComplete)
-                    "activates automatically when your car's bluetooth connects"
-                else
-                    "complete the steps below to enable monitoring",
+                text = if (setupComplete) readySubtext else "complete the steps below to enable monitoring",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Sky,
                 textAlign = TextAlign.Center
             )
         }
 
-        if (uiState.riders.isEmpty() || uiState.connectedVehicle == null) {
+        if (uiState.riders.isEmpty() || !hasVehicle) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -157,11 +173,11 @@ private fun IdleState(
                         )
                     }
                 }
-                if (uiState.connectedVehicle == null) {
+                if (!hasVehicle) {
                     BtwCard {
                         BtwCardRow(
-                            label = "pair a vehicle",
-                            sublabel = "btw needs a bluetooth connection to detect departures",
+                            label = "add a vehicle",
+                            sublabel = "pair a bluetooth device or add a location-only vehicle",
                             onClick = onNavigateToSettings
                         )
                     }

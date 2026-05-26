@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.tonedefapps.btw.domain.model.Vehicle
+import com.tonedefapps.btw.domain.model.isLocationOnly
 import com.tonedefapps.btw.ui.theme.*
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -34,6 +36,8 @@ fun VehiclesScreen(
 ) {
     val vehicles by viewModel.vehicles.collectAsState()
     val context = LocalContext.current
+    var showNoBtDialog by remember { mutableStateOf(false) }
+    var noBtName by remember { mutableStateOf("") }
 
     val pairingLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -115,16 +119,16 @@ fun VehiclesScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("no vehicles paired", style = MaterialTheme.typography.bodyLarge, color = Air)
+                    Text("no vehicles added", style = MaterialTheme.typography.bodyLarge, color = Air)
                     Text(
-                        "pair the bluetooth audio system or hands-free kit in your car",
+                        "pair a bluetooth device or add a location-only vehicle",
                         style = MaterialTheme.typography.bodySmall,
                         color = Sky
                     )
                 }
             }
         } else {
-            BtwSectionHeader("paired vehicles")
+            BtwSectionHeader("vehicles")
             BtwCard {
                 vehicles.forEachIndexed { index, vehicle ->
                     if (index > 0) BtwRowDivider()
@@ -135,15 +139,41 @@ fun VehiclesScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-        BtwPrimaryButton(text = "pair a vehicle", onClick = ::startPairing)
+        BtwPrimaryButton(text = "pair a bluetooth vehicle", onClick = ::startPairing)
         Spacer(Modifier.height(8.dp))
-        Text(
-            text = "pair the car's audio system or hands-free bluetooth kit",
-            style = MaterialTheme.typography.bodySmall,
-            color = Sky,
+        TextButton(
+            onClick = { noBtName = ""; showNoBtDialog = true },
             modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text("my car doesn't have bluetooth", color = Sky, style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+
+    if (showNoBtDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoBtDialog = false },
+            containerColor = Depth,
+            title = { Text("name your vehicle", color = Air, style = MaterialTheme.typography.titleLarge) },
+            text = {
+                BtwTextField(
+                    value = noBtName,
+                    onValueChange = { noBtName = it },
+                    label = "vehicle name (e.g. ford f-150)"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (noBtName.isNotBlank()) {
+                        viewModel.addLocationOnlyVehicle(noBtName)
+                        showNoBtDialog = false
+                    }
+                }) { Text("add", color = Air) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoBtDialog = false }) { Text("cancel", color = Sky) }
+            }
         )
-        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -156,9 +186,22 @@ private fun VehicleRow(vehicle: Vehicle, onDelete: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
-            Text(vehicle.name, style = MaterialTheme.typography.bodyLarge, color = Air)
-            Text(vehicle.bluetoothAddress, style = MaterialTheme.typography.bodySmall, color = Sky)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            if (vehicle.isLocationOnly) {
+                Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = Sky, modifier = Modifier.size(18.dp))
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(vehicle.name, style = MaterialTheme.typography.bodyLarge, color = Air)
+                Text(
+                    text = if (vehicle.isLocationOnly) "location mode" else vehicle.bluetoothAddress!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Sky
+                )
+            }
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Outlined.Delete, contentDescription = "remove", tint = Sky.copy(alpha = 0.6f))

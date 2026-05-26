@@ -8,7 +8,7 @@ import com.tonedefapps.btw.domain.model.Vehicle
 data class VehicleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val bluetoothAddress: String,
+    val bluetoothAddress: String?,
     val lastLatitude: Double,
     val lastLongitude: Double,
     val lastSeenAt: Long,

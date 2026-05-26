@@ -17,6 +17,12 @@ class MonitorStateHolder @Inject constructor() {
     private val _activeAlertId = MutableStateFlow(-1L)
     val activeAlertId: StateFlow<Long> = _activeAlertId
 
+    private val _passiveWatchActive = MutableStateFlow(false)
+    val passiveWatchActive: StateFlow<Boolean> = _passiveWatchActive
+
+    fun onPassiveWatchStarted() { _passiveWatchActive.value = true }
+    fun onPassiveWatchStopped() { _passiveWatchActive.value = false }
+
     fun onVehicleConnected() {
         _tripState.value = TripState.IN_VEHICLE
         _tripStartedAt.value = System.currentTimeMillis()
