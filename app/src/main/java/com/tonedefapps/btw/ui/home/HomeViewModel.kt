@@ -13,6 +13,7 @@ import com.tonedefapps.btw.domain.repository.PreferencesRepository
 import com.tonedefapps.btw.domain.repository.RiderRepository
 import com.tonedefapps.btw.domain.repository.RiderScheduleRepository
 import com.tonedefapps.btw.domain.usecase.GetAlertHistoryUseCase
+import com.tonedefapps.btw.domain.usecase.GetLocationsUseCase
 import com.tonedefapps.btw.domain.usecase.GetRidersUseCase
 import com.tonedefapps.btw.domain.usecase.GetVehiclesUseCase
 import com.tonedefapps.btw.service.BtwMonitorService
@@ -32,7 +33,8 @@ data class HomeUiState(
     val recentAlerts: List<AlertEvent> = emptyList(),
     val tripStartedAt: Long? = null,
     val hasLocationOnlyVehicle: Boolean = false,
-    val passiveWatchActive: Boolean = false
+    val passiveWatchActive: Boolean = false,
+    val hasSavedLocations: Boolean = false
 )
 
 @HiltViewModel
@@ -40,6 +42,7 @@ class HomeViewModel @Inject constructor(
     application: Application,
     getRidersUseCase: GetRidersUseCase,
     getVehiclesUseCase: GetVehiclesUseCase,
+    getLocationsUseCase: GetLocationsUseCase,
     private val alertRepository: AlertRepository,
     private val preferencesRepository: PreferencesRepository,
     private val monitorStateHolder: MonitorStateHolder,
@@ -70,13 +73,17 @@ class HomeViewModel @Inject constructor(
         combine(
             monitorStateHolder.tripStartedAt,
             monitorStateHolder.passiveWatchActive,
+            getLocationsUseCase(),
             getAlertHistoryUseCase()
-        ) { tripStart, passiveWatch, history -> Triple(tripStart, passiveWatch, history) }
-    ) { (riders, schedules), vehicles, tripState, activeAlertId, (tripStart, passiveWatch, history) ->
+        ) { tripStart, passiveWatch, locations, history -> object {
+            val tripStart = tripStart; val passiveWatch = passiveWatch
+            val locations = locations; val history = history
+        }}
+    ) { (riders, schedules), vehicles, tripState, activeAlertId, extra ->
         val now = System.currentTimeMillis()
         val activeRiders = riders.filter { it.isActive(schedules.firstOrNull { s -> s.riderId == it.id }, now) }
         val pausedRiders = riders.filter { !it.isActive(schedules.firstOrNull { s -> s.riderId == it.id }, now) }
-        val todayAlerts = history
+        val todayAlerts = extra.history
             .filter { it.triggeredAt >= startOfToday && it.outcome != AlertOutcome.PENDING }
             .sortedByDescending { it.triggeredAt }
             .take(3)
@@ -89,9 +96,10 @@ class HomeViewModel @Inject constructor(
             activeAlertId = activeAlertId,
             activeRiderName = activeRiders.firstOrNull()?.name ?: riders.firstOrNull()?.name ?: "",
             recentAlerts = todayAlerts,
-            tripStartedAt = tripStart,
+            tripStartedAt = extra.tripStart,
             hasLocationOnlyVehicle = vehicles.any { it.isLocationOnly },
-            passiveWatchActive = passiveWatch
+            passiveWatchActive = extra.passiveWatch,
+            hasSavedLocations = extra.locations.isNotEmpty()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 

@@ -113,13 +113,12 @@ private fun IdleState(
     onNavigateToSettings: () -> Unit
 ) {
     val hasVehicle = uiState.connectedVehicle != null
-    val setupComplete = uiState.riders.isNotEmpty() && hasVehicle
+    val needsParkingSpot = uiState.hasLocationOnlyVehicle && !uiState.hasSavedLocations
+    val setupComplete = uiState.riders.isNotEmpty() && hasVehicle && !needsParkingSpot
     val timeFmt = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
 
-    // Status label for the current monitoring mode
     val statusLabel = when {
         uiState.passiveWatchActive -> "watching"
-        setupComplete && uiState.hasLocationOnlyVehicle -> "ready"
         setupComplete -> "ready"
         else -> "setup needed"
     }
@@ -159,7 +158,7 @@ private fun IdleState(
             )
         }
 
-        if (uiState.riders.isEmpty() || !hasVehicle) {
+        if (uiState.riders.isEmpty() || !hasVehicle || needsParkingSpot) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -178,6 +177,15 @@ private fun IdleState(
                         BtwCardRow(
                             label = "add a vehicle",
                             sublabel = "pair a bluetooth device or add a location-only vehicle",
+                            onClick = onNavigateToSettings
+                        )
+                    }
+                }
+                if (needsParkingSpot) {
+                    BtwCard {
+                        BtwCardRow(
+                            label = "add a parking spot",
+                            sublabel = "btw watches for when you leave — add where you usually park",
                             onClick = onNavigateToSettings
                         )
                     }
