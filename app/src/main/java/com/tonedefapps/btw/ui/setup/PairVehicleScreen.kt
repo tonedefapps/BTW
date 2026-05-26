@@ -130,7 +130,7 @@ fun PairVehicleScreen(
                 )
                 Text(
                     text = if (showNoBtForm)
-                        "btw will watch for when you leave your saved parking spots."
+                        "btw will notice when you leave one of your known locations."
                     else
                         "btw watches for when your car's bluetooth disconnects. pair the audio system or hands-free kit.",
                     style = MaterialTheme.typography.bodyMedium,

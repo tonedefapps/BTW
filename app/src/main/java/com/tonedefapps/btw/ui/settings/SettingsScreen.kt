@@ -93,9 +93,9 @@ fun SettingsScreen(
         Spacer(Modifier.height(24.dp))
 
         // ── Locations ──────────────────────────────────────────────────────
-        BtwSectionHeader("locations")
+        BtwSectionHeader("known locations")
         BtwCard {
-            BtwCardRow(label = "manage saved locations", onClick = onNavigateToLocations)
+            BtwCardRow(label = "known locations", onClick = onNavigateToLocations)
         }
 
         Spacer(Modifier.height(24.dp))

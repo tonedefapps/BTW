@@ -38,7 +38,7 @@ fun LocationsScreen(
             .padding(horizontal = 24.dp)
     ) {
         BtwTopBar(
-            title = "locations",
+            title = "known locations",
             onBack = onBack,
             trailing = {
                 IconButton(onClick = { showAddDialog = true }) {
@@ -50,9 +50,9 @@ fun LocationsScreen(
         if (locations.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("no parking spots yet", style = MaterialTheme.typography.bodyMedium, color = Air)
+                    Text("no known locations yet", style = MaterialTheme.typography.bodyMedium, color = Air)
                     Text(
-                        "add the places you usually park — btw watches for when you leave",
+                        "add places you regularly stop — home, work, school drop-off, anywhere btw should keep watch",
                         style = MaterialTheme.typography.bodySmall,
                         color = Sky
                     )
@@ -148,7 +148,7 @@ private fun AddLocationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Depth,
-        title = { Text("add parking spot", color = Air, style = MaterialTheme.typography.titleLarge) },
+        title = { Text("add a known location", color = Air, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BtwTextField(value = label, onValueChange = { label = it }, label = "label (e.g. home, work)")

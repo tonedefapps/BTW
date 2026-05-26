@@ -124,7 +124,7 @@ private fun IdleState(
     }
     val readySubtext = when {
         uiState.hasLocationOnlyVehicle ->
-            "monitoring starts automatically when you leave a saved parking spot"
+            "btw notices when you leave one of your known locations"
         else ->
             "activates automatically when your car's bluetooth connects"
     }
@@ -184,8 +184,8 @@ private fun IdleState(
                 if (needsParkingSpot) {
                     BtwCard {
                         BtwCardRow(
-                            label = "add a parking spot",
-                            sublabel = "btw watches for when you leave — add where you usually park",
+                            label = "add a known location",
+                            sublabel = "add the places you regularly stop so btw knows when you've left",
                             onClick = onNavigateToSettings
                         )
                     }

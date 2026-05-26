@@ -197,7 +197,7 @@ private fun VehicleRow(vehicle: Vehicle, onDelete: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(vehicle.name, style = MaterialTheme.typography.bodyLarge, color = Air)
                 Text(
-                    text = if (vehicle.isLocationOnly) "location mode" else vehicle.bluetoothAddress!!,
+                    text = if (vehicle.isLocationOnly) "watches known locations" else vehicle.bluetoothAddress!!,
                     style = MaterialTheme.typography.bodySmall,
                     color = Sky
                 )
