@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.btw.app-mergeDebugResources-69:/values-en-rXC/values-en-rXC.xml",
+            "outputFile": "com.tonedefapps.btw.app-mergeDebugResources-70:/values-en-rXC/values-en-rXC.xml",
             "map": [
                 {
                     "source": "/Users/scottfowler/.gradle/caches/transforms-4/e493f174210d5c2dbe480397ffd54502/transformed/ui-release/res/values-en-rXC/values-en-rXC.xml",

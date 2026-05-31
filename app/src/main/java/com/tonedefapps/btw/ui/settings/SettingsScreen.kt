@@ -35,50 +35,33 @@ fun SettingsScreen(
     ) {
         BtwTopBar(title = "settings")
 
-        // ── Premium upsell (free users only) ──────────────────────────────
-        if (!isPremium) {
-            BtwCard {
-                BtwCardRow(
-                    label = "unlock btw premium",
-                    sublabel = "handoff alerts · configurable timers · $0.99/mo",
-                    onClick = onNavigateToPaywall,
-                    trailing = { PremiumBadge() }
-                )
-            }
-            Spacer(Modifier.height(24.dp))
-        }
-
-        // ── Vehicles ───────────────────────────────────────────────────────
+        // ── Vehicles ───────────────────────────────────────────────────────────
         BtwSectionHeader("vehicles")
         BtwCard {
-            BtwCardRow(label = "manage paired vehicles", sublabel = "add or remove bluetooth pairings", onClick = onNavigateToVehicles)
+            BtwCardRow(label = "your vehicles", sublabel = "add or remove vehicles", onClick = onNavigateToVehicles)
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // ── Escalation ladder ──────────────────────────────────────────────
-        BtwSectionHeader("alert escalation")
+        // ── How btw checks in ──────────────────────────────────────────────────
+        BtwSectionHeader("how btw checks in")
         BtwCard {
             BtwCardRow(
-                label = "1 · gentle notification",
+                label = "1 · gentle nudge",
                 sublabel = formatSeconds(prefs.step1DelaySeconds) + " after leaving vehicle",
-                onClick = { editingStep = 1 }
+                onClick = { if (isPremium) editingStep = 1 else onNavigateToPaywall() },
+                trailing = { if (!isPremium) PremiumBadge() }
             )
             BtwRowDivider()
             BtwCardRow(
-                label = "2 · persistent alert",
+                label = "2 · persistent alarm",
                 sublabel = formatSeconds(prefs.step2DelaySeconds) + " unacknowledged",
-                onClick = { editingStep = 2 }
+                onClick = { if (isPremium) editingStep = 2 else onNavigateToPaywall() },
+                trailing = { if (!isPremium) PremiumBadge() }
             )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        // ── Hot day mode ───────────────────────────────────────────────────
-        BtwSectionHeader("hot day mode")
-        BtwCard {
+            BtwRowDivider()
             BtwCardValueRow(
-                label = "auto-detect via battery temperature",
+                label = "auto hot day",
                 value = "on"
             )
             BtwRowDivider()
@@ -92,15 +75,15 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // ── Locations ──────────────────────────────────────────────────────
+        // ── Locations ──────────────────────────────────────────────────────────
         BtwSectionHeader("known locations")
         BtwCard {
-            BtwCardRow(label = "known locations", onClick = onNavigateToLocations)
+            BtwCardRow(label = "known locations", sublabel = "places btw watches for your departure", onClick = onNavigateToLocations)
         }
 
         Spacer(Modifier.height(24.dp))
 
-        // ── Handoff ────────────────────────────────────────────────────────
+        // ── Handoff ────────────────────────────────────────────────────────────
         BtwSectionHeader("handoff contacts")
         if (riders.isEmpty()) {
             BtwCard {
@@ -121,13 +104,27 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // ── Alert history ──────────────────────────────────────────────────
+        // ── Alert history ──────────────────────────────────────────────────────
         BtwSectionHeader("history")
         BtwCard {
             BtwCardRow(label = "alert history", sublabel = "view past alerts and outcomes", onClick = onNavigateToHistory)
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
+
+        // ── Premium upsell (free users only) ──────────────────────────────────
+        if (!isPremium) {
+            BtwCard {
+                BtwCardRow(
+                    label = "unlock btw premium",
+                    sublabel = "handoff alerts · configurable timers · $0.99/mo",
+                    onClick = onNavigateToPaywall,
+                    trailing = { PremiumBadge() }
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
         Text(
             text = "no cloud · no data · no agenda · just btw",
             style = MaterialTheme.typography.bodySmall,
@@ -142,8 +139,8 @@ fun SettingsScreen(
             else -> prefs.step2DelaySeconds
         }
         val label = when (step) {
-            1 -> "gentle notification"
-            else -> "persistent alert"
+            1 -> "gentle nudge"
+            else -> "persistent alarm"
         }
         DelayPickerDialog(
             stepLabel = label,

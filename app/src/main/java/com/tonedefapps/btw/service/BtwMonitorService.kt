@@ -22,18 +22,20 @@ import androidx.work.*
 import com.tonedefapps.btw.R
 import com.tonedefapps.btw.data.local.BtwDatabase
 import com.tonedefapps.btw.data.local.entity.SavedLocationEntity
-import com.tonedefapps.btw.domain.model.AlertEvent
+import com.tonedefapps.btw.data.preferences.BtwPreferences
 import com.tonedefapps.btw.domain.model.AlertOutcome
-import com.tonedefapps.btw.domain.model.HandoffEvent
+import com.tonedefapps.btw.domain.model.HandoffOutcome
 import com.tonedefapps.btw.domain.model.isActive
 import com.tonedefapps.btw.domain.model.isManuallyPaused
 import com.tonedefapps.btw.domain.monitor.MonitorStateHolder
+import com.tonedefapps.btw.domain.repository.HandoffRepository
 import com.tonedefapps.btw.domain.usecase.CheckExpectedPickupUseCase
 import com.tonedefapps.btw.domain.usecase.GetNearbyLocationUseCase
 import com.tonedefapps.btw.domain.usecase.RecordLocationVisitUseCase
 import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.sqrt
@@ -43,6 +45,8 @@ class BtwMonitorService : Service(), SensorEventListener {
 
     @Inject lateinit var database: BtwDatabase
     @Inject lateinit var workManager: WorkManager
+    @Inject lateinit var preferences: BtwPreferences
+    @Inject lateinit var handoffRepository: HandoffRepository
     @Inject lateinit var getNearbyLocation: GetNearbyLocationUseCase
     @Inject lateinit var recordLocationVisit: RecordLocationVisitUseCase
     @Inject lateinit var checkExpectedPickup: CheckExpectedPickupUseCase
@@ -67,7 +71,8 @@ class BtwMonitorService : Service(), SensorEventListener {
     private var btDisconnected = false
     private var movedAwayFromVehicle = false
     private var alertTriggered = false
-    private var currentAlertId: Long = -1L
+    private val currentAlertIds: MutableList<Long> = mutableListOf()
+    private var sustainedDrivingCount = 0
 
     // ── Location dwell tracking ──────────────────────────────────────────────
     private var currentSavedLocationId: Long = -1L
@@ -126,6 +131,17 @@ class BtwMonitorService : Service(), SensorEventListener {
                     }
                 }
             }
+            ACTION_HANDOFF_CONFIRMED -> {
+                val eventId = intent.getLongExtra(EXTRA_HANDOFF_EVENT_ID, -1L)
+                val riderId = intent.getLongExtra(EXTRA_HANDOFF_RIDER_ID, -1L)
+                if (eventId >= 0) {
+                    serviceScope.launch {
+                        handoffRepository.updateHandoffOutcome(eventId, HandoffOutcome.COMPLETED)
+                        if (riderId >= 0) workManager.cancelUniqueWork(HandoffMonitorWorker.handoffWorkName(riderId))
+                        getSystemService(NotificationManager::class.java).cancel(HandoffMonitorWorker.NOTIFICATION_ID_HANDOFF)
+                    }
+                }
+            }
             ACTION_STOP -> stopSelf()
             else -> {
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -159,14 +175,28 @@ class BtwMonitorService : Service(), SensorEventListener {
     }
 
     private fun onVehicleConnected(address: String) {
+        // Set synchronously — onVehicleDisconnected's guard reads this on the main thread.
+        // If this stays inside the IO coroutine, a BT flicker causes the disconnect to be
+        // silently ignored (guard sees null), then the coroutine finishes setting IN_VEHICLE
+        // with BT already gone.
+        connectedVehicleAddress = address
+
         serviceScope.launch {
-            val vehicle = database.vehicleDao().getByBluetoothAddress(address) ?: return@launch
-            connectedVehicleAddress = address
+            val vehicle = database.vehicleDao().getByBluetoothAddress(address) ?: run {
+                // Unknown device — clear the optimistic address so the guard resets cleanly
+                if (connectedVehicleAddress == address) connectedVehicleAddress = null
+                return@launch
+            }
+
+            // BT flickered: disconnect fired and ran its logic while the DB query was in flight
+            if (btDisconnected) return@launch
+
             connectedVehicleId = vehicle.id
             btDisconnected = false
             movedAwayFromVehicle = false
             alertTriggered = false
             vehicleParkedLocation = null
+            sustainedDrivingCount = 0
             stopAccelerometer()
             setLocationMode(LocationMode.IN_VEHICLE)
             monitorStateHolder.onVehicleConnected()
@@ -193,12 +223,13 @@ class BtwMonitorService : Service(), SensorEventListener {
         setLocationMode(LocationMode.ALERT_ACTIVE)
         startAccelerometerForAlertWindow()
         checkTripleTrigger()
-        checkHandoffWindows()
+        checkHandoffWindows(currentSavedLocationId)
     }
 
     // Called on main thread when user exits a saved parking location (no-BT vehicle mode)
     private fun onDepartureSensed(parkedAt: SavedLocationEntity) {
         monitorStateHolder.onPassiveWatchStopped()
+        sustainedDrivingCount = 0
         btDisconnected = true
         vehicleParkedLocation = Location("saved-location").apply {
             latitude = parkedAt.lat
@@ -207,7 +238,7 @@ class BtwMonitorService : Service(), SensorEventListener {
         setLocationMode(LocationMode.ALERT_ACTIVE)
         startAccelerometerForAlertWindow()
         checkTripleTrigger()
-        checkHandoffWindows()
+        checkHandoffWindows(parkedAt.id)
     }
 
     // ── Location ─────────────────────────────────────────────────────────────
@@ -236,7 +267,10 @@ class BtwMonitorService : Service(), SensorEventListener {
     private fun startLocationUpdates() {
         serviceScope.launch {
             val hasNoBtVehicle = database.vehicleDao().getAllVehiclesList().any { it.bluetoothAddress == null }
-            if (hasNoBtVehicle) {
+            val btPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+            } else true
+            if (hasNoBtVehicle || !btPermissionGranted) {
                 monitorStateHolder.onPassiveWatchStarted()
                 setLocationMode(LocationMode.PASSIVE_WATCH)
             }
@@ -250,6 +284,7 @@ class BtwMonitorService : Service(), SensorEventListener {
         accelerometerJob = serviceScope.launch {
             delay(10 * 60 * 1000L)
             sensorManager.unregisterListener(this@BtwMonitorService)
+            isMotionConsistentWithDriving = false  // stale data must not block a trigger after sensor stops
             setLocationMode(LocationMode.OFF)
         }
     }
@@ -310,6 +345,29 @@ class BtwMonitorService : Service(), SensorEventListener {
             event.values[2] * event.values[2].toDouble()
         ).toFloat()
         isMotionConsistentWithDriving = mag > DRIVING_MOTION_THRESHOLD
+
+        // No-BT mode: sustained driving after departure means user re-entered the vehicle.
+        // Reset departure watch to prevent false trigger at next stop.
+        if (btDisconnected && !alertTriggered && connectedVehicleAddress == null) {
+            if (isMotionConsistentWithDriving) {
+                if (++sustainedDrivingCount >= DRIVING_RESET_COUNT) resetNoBtDeparture()
+            } else {
+                sustainedDrivingCount = 0
+            }
+        }
+    }
+
+    private fun resetNoBtDeparture() {
+        btDisconnected = false
+        movedAwayFromVehicle = false
+        alertTriggered = false
+        vehicleParkedLocation = null
+        sustainedDrivingCount = 0
+        stopAccelerometer()
+        serviceScope.launch {
+            monitorStateHolder.onPassiveWatchStarted()
+            setLocationMode(LocationMode.PASSIVE_WATCH)
+        }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -335,43 +393,50 @@ class BtwMonitorService : Service(), SensorEventListener {
                 rider.isActive(schedules.firstOrNull { it.riderId == riderEntity.id }?.toDomain(), now)
                     && !rider.isManuallyPaused(now)
             }
-            if (activeRiders.isEmpty()) return@launch  // all paused — skip alert
+            if (activeRiders.isEmpty()) return@launch
 
-            val rider = activeRiders.first()
             val address = connectedVehicleAddress
             val vehicle = if (address != null)
                 database.vehicleDao().getByBluetoothAddress(address)
             else
                 database.vehicleDao().getAllVehiclesList().firstOrNull { it.bluetoothAddress == null }
 
-            val alertId = database.alertDao().insert(
-                com.tonedefapps.btw.data.local.entity.AlertEntity(
-                    riderId = rider.id,
-                    riderName = rider.name,
-                    vehicleId = vehicle?.id ?: -1L,
-                    vehicleName = vehicle?.name ?: "vehicle",
-                    triggeredAt = now,
-                    acknowledgedAt = null,
-                    outcome = AlertOutcome.PENDING.name,
-                    latitude = vehicleParkedLocation?.latitude ?: 0.0,
-                    longitude = vehicleParkedLocation?.longitude ?: 0.0
+            currentAlertIds.clear()
+            activeRiders.forEach { rider ->
+                val alertId = database.alertDao().insert(
+                    com.tonedefapps.btw.data.local.entity.AlertEntity(
+                        riderId = rider.id,
+                        riderName = rider.name,
+                        vehicleId = vehicle?.id ?: -1L,
+                        vehicleName = vehicle?.name ?: "vehicle",
+                        triggeredAt = now,
+                        acknowledgedAt = null,
+                        outcome = AlertOutcome.PENDING.name,
+                        latitude = vehicleParkedLocation?.latitude ?: 0.0,
+                        longitude = vehicleParkedLocation?.longitude ?: 0.0
+                    )
                 )
-            )
-            currentAlertId = alertId
-            monitorStateHolder.onAlertTriggered(alertId)
-            scheduleEscalation(alertId)
+                currentAlertIds.add(alertId)
+            }
+
+            val firstAlertId = currentAlertIds.firstOrNull() ?: return@launch
+            monitorStateHolder.onAlertTriggered(firstAlertId)
+            scheduleEscalation(firstAlertId)
         }
     }
 
-    fun scheduleEscalation(alertId: Long) {
+    private suspend fun scheduleEscalation(alertId: Long) {
+        val prefs = preferences.alertPreferences.first()
         val autoHotDay = readBatteryTempCelsius() >= HOT_BATTERY_TEMP_C
+        val multiplier = if (prefs.hotDayModeEnabled || autoHotDay) HOT_DAY_MULTIPLIER else 1f
+        val step1Delay = (prefs.step1DelaySeconds * multiplier).toLong().coerceAtLeast(10L)
         val work = OneTimeWorkRequestBuilder<AlertEscalationWorker>()
             .setInputData(workDataOf(
                 AlertEscalationWorker.KEY_STEP to 1,
                 AlertEscalationWorker.KEY_ALERT_ID to alertId,
                 AlertEscalationWorker.KEY_AUTO_HOT_DAY to autoHotDay
             ))
-            .setInitialDelay(30, TimeUnit.SECONDS)
+            .setInitialDelay(step1Delay, TimeUnit.SECONDS)
             .addTag(TAG_ESCALATION)
             .build()
         workManager.enqueueUniqueWork(ESCALATION_WORK_NAME, ExistingWorkPolicy.REPLACE, work)
@@ -408,8 +473,7 @@ class BtwMonitorService : Service(), SensorEventListener {
 
     // ── Handoff detection ────────────────────────────────────────────────────
 
-    private fun checkHandoffWindows() {
-        val locationId = currentSavedLocationId
+    private fun checkHandoffWindows(locationId: Long) {
         if (locationId < 0) return
 
         serviceScope.launch {
@@ -439,9 +503,11 @@ class BtwMonitorService : Service(), SensorEventListener {
         stopAccelerometer()
         monitorStateHolder.onAcknowledged()
         serviceScope.launch {
-            if (currentAlertId >= 0) {
-                database.alertDao().updateOutcome(currentAlertId, AlertOutcome.SAFE.name, System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            currentAlertIds.forEach { id ->
+                database.alertDao().updateOutcome(id, AlertOutcome.SAFE.name, now)
             }
+            currentAlertIds.clear()
             val hasNoBtVehicle = database.vehicleDao().getAllVehiclesList().any { it.bluetoothAddress == null }
             if (hasNoBtVehicle) {
                 monitorStateHolder.onPassiveWatchStarted()
@@ -462,9 +528,11 @@ class BtwMonitorService : Service(), SensorEventListener {
         stopAccelerometer()
         monitorStateHolder.onGoingBack()
         serviceScope.launch {
-            if (currentAlertId >= 0) {
-                database.alertDao().updateOutcome(currentAlertId, AlertOutcome.WENT_BACK.name, System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            currentAlertIds.forEach { id ->
+                database.alertDao().updateOutcome(id, AlertOutcome.WENT_BACK.name, now)
             }
+            currentAlertIds.clear()
             val hasNoBtVehicle = database.vehicleDao().getAllVehiclesList().any { it.bluetoothAddress == null }
             if (hasNoBtVehicle) {
                 monitorStateHolder.onPassiveWatchStarted()
@@ -513,12 +581,17 @@ class BtwMonitorService : Service(), SensorEventListener {
         const val ACTION_ACKNOWLEDGE_SAFE = "com.tonedefapps.btw.ACTION_SAFE"
         const val ACTION_ACKNOWLEDGE_GOING_BACK = "com.tonedefapps.btw.ACTION_GOING_BACK"
         const val ACTION_UNPAUSE_RIDER = "com.tonedefapps.btw.ACTION_UNPAUSE_RIDER"
+        const val ACTION_HANDOFF_CONFIRMED = "com.tonedefapps.btw.ACTION_HANDOFF_CONFIRMED"
         const val ACTION_STOP = "com.tonedefapps.btw.ACTION_STOP"
         const val EXTRA_RIDER_ID = "rider_id"
+        const val EXTRA_HANDOFF_EVENT_ID = "handoff_event_id"
+        const val EXTRA_HANDOFF_RIDER_ID = "handoff_rider_id"
         const val TAG_ESCALATION = "btw_escalation"
         const val ESCALATION_WORK_NAME = "btw_escalation_ladder"
         private const val DISTANCE_THRESHOLD_METERS = 15.24f
         private const val DRIVING_MOTION_THRESHOLD = 12f
         private const val HOT_BATTERY_TEMP_C = 36f
+        private const val HOT_DAY_MULTIPLIER = 0.5f
+        private const val DRIVING_RESET_COUNT = 5
     }
 }

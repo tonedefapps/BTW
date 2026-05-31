@@ -15,6 +15,9 @@ interface AlertDao {
     @Query("UPDATE alert_events SET outcome = :outcome, acknowledgedAt = :acknowledgedAt WHERE id = :id")
     suspend fun updateOutcome(id: Long, outcome: String, acknowledgedAt: Long)
 
+    @Query("SELECT * FROM alert_events WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): AlertEntity?
+
     @Query("DELETE FROM alert_events WHERE id = :id")
     suspend fun deleteById(id: Long)
 }

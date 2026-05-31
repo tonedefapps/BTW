@@ -32,7 +32,7 @@ class BtwPreferences @Inject constructor(private val context: Context) {
             AlertPreferences(
                 step1DelaySeconds = prefs[Keys.STEP1_DELAY] ?: 30,
                 step2DelaySeconds = prefs[Keys.STEP2_DELAY] ?: 120,
-                hotDayModeEnabled = prefs[Keys.HOT_DAY_ENABLED] ?: true,
+                hotDayModeEnabled = prefs[Keys.HOT_DAY_ENABLED] ?: false,
                 hotDayThresholdFahrenheit = prefs[Keys.HOT_DAY_THRESHOLD] ?: 80,
                 onboardingComplete = prefs[Keys.ONBOARDING_COMPLETE] ?: false,
                 isPremium = prefs[Keys.IS_PREMIUM] ?: false

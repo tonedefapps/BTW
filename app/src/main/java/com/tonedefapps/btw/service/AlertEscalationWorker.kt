@@ -4,6 +4,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.location.Geocoder
+import android.net.Uri
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
@@ -14,8 +17,14 @@ import com.tonedefapps.btw.data.preferences.BtwPreferences
 import com.tonedefapps.btw.domain.model.AlertOutcome
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 
 @HiltWorker
 class AlertEscalationWorker @AssistedInject constructor(
@@ -32,50 +41,102 @@ class AlertEscalationWorker @AssistedInject constructor(
         val prefs = preferences.alertPreferences.first()
         val multiplier = if (prefs.hotDayModeEnabled || autoHotDay) HOT_DAY_MULTIPLIER else 1f
 
+        val alert = database.alertDao().getById(alertId)
+        val riderName = alert?.riderName ?: ""
+        val lat = alert?.latitude ?: 0.0
+        val lng = alert?.longitude ?: 0.0
+        val address = resolveAddress(lat, lng)
+
         when (step) {
             1 -> {
-                showGentleNotification(alertId)
+                showGentleNotification(alertId, riderName, lat, lng, address)
                 scheduleNextStep(2, alertId, (prefs.step2DelaySeconds * multiplier).toLong(), autoHotDay)
             }
             2 -> {
-                showPersistentAlert(alertId)
+                showPersistentAlert(alertId, riderName, lat, lng, address)
             }
         }
         return Result.success()
     }
 
-    private fun showGentleNotification(alertId: Long) {
+    private fun showGentleNotification(alertId: Long, riderName: String, lat: Double, lng: Double, address: String) {
         val nm = applicationContext.getSystemService(NotificationManager::class.java)
-        val openIntent = openAppIntent(alertId)
-        val notification = NotificationCompat.Builder(applicationContext, BtwMonitorService.CHANNEL_ALERT)
+        val contentText = buildString {
+            if (riderName.isNotBlank()) append("$riderName · ")
+            append("still in the car?")
+            if (address.isNotBlank()) append("\n$address")
+        }
+        val builder = NotificationCompat.Builder(applicationContext, BtwMonitorService.CHANNEL_ALERT)
             .setContentTitle("btw...")
-            .setContentText("still in the car?")
+            .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setSmallIcon(R.drawable.ic_notification)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(openIntent)
+            .setContentIntent(openAppIntent(alertId))
             .addAction(0, "we're safe", safeIntent())
             .addAction(0, "going back", goingBackIntent())
             .setAutoCancel(false)
-            .build()
-        nm.notify(BtwMonitorService.NOTIFICATION_ID_ALERT, notification)
+        directionsIntent(lat, lng)?.let { builder.addAction(0, "directions", it) }
+        nm.notify(BtwMonitorService.NOTIFICATION_ID_ALERT, builder.build())
     }
 
-    private fun showPersistentAlert(alertId: Long) {
+    private fun showPersistentAlert(alertId: Long, riderName: String, lat: Double, lng: Double, address: String) {
         val nm = applicationContext.getSystemService(NotificationManager::class.java)
-        val openIntent = openAppIntent(alertId)
-        val notification = NotificationCompat.Builder(applicationContext, BtwMonitorService.CHANNEL_ALERT)
+        val contentText = buildString {
+            if (riderName.isNotBlank()) append("$riderName · ")
+            append("still in the car?")
+            if (address.isNotBlank()) append("\n$address")
+        }
+        val builder = NotificationCompat.Builder(applicationContext, BtwMonitorService.CHANNEL_ALERT)
             .setContentTitle("hey...")
-            .setContentText("still in the car?")
+            .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setSmallIcon(R.drawable.ic_notification)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setContentIntent(openIntent)
+            .setContentIntent(openAppIntent(alertId))
             .addAction(0, "we're safe", safeIntent())
             .addAction(0, "going back", goingBackIntent())
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(openIntent, true)
-            .build()
-        nm.notify(BtwMonitorService.NOTIFICATION_ID_ALERT, notification)
+            .setFullScreenIntent(openAppIntent(alertId), true)
+        directionsIntent(lat, lng)?.let { builder.addAction(0, "directions", it) }
+        nm.notify(BtwMonitorService.NOTIFICATION_ID_ALERT, builder.build())
+    }
+
+    private suspend fun resolveAddress(lat: Double, lng: Double): String {
+        if (lat == 0.0 && lng == 0.0) return ""
+        if (!Geocoder.isPresent()) return ""
+        return try {
+            withTimeout(3_000L) {
+                val geocoder = Geocoder(applicationContext, Locale.getDefault())
+                val addresses = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    suspendCancellableCoroutine { cont ->
+                        geocoder.getFromLocation(lat, lng, 1) { list -> cont.resume(list) }
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    withContext(Dispatchers.IO) { geocoder.getFromLocation(lat, lng, 1) ?: emptyList() }
+                }
+                addresses.firstOrNull()?.let { addr ->
+                    listOfNotNull(
+                        listOfNotNull(addr.subThoroughfare, addr.thoroughfare)
+                            .joinToString(" ").ifBlank { null },
+                        addr.locality
+                    ).joinToString(", ")
+                } ?: ""
+            }
+        } catch (_: Exception) { "" }
+    }
+
+    private fun directionsIntent(lat: Double, lng: Double): PendingIntent? {
+        if (lat == 0.0 && lng == 0.0) return null
+        val geoUri = Uri.parse("geo:$lat,$lng?q=$lat,$lng")
+        val mapIntent = Intent(Intent.ACTION_VIEW, geoUri)
+        if (mapIntent.resolveActivity(applicationContext.packageManager) == null) return null
+        return PendingIntent.getActivity(
+            applicationContext, 3, mapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun openAppIntent(alertId: Long) = PendingIntent.getActivity(

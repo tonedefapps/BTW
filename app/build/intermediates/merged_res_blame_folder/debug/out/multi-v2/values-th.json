@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.btw.app-mergeDebugResources-69:/values-th/values-th.xml",
+            "outputFile": "com.tonedefapps.btw.app-mergeDebugResources-70:/values-th/values-th.xml",
             "map": [
                 {
                     "source": "/Users/scottfowler/.gradle/caches/transforms-4/9818803d8301305b479e6ccf05a3f433/transformed/foundation-release/res/values-th/values-th.xml",

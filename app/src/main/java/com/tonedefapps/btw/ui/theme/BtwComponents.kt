@@ -163,7 +163,7 @@ fun BtwCardToggleRow(
 }
 
 @Composable
-fun BtwCardValueRow(label: String, value: String) {
+fun BtwCardValueRow(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color = Sky) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +172,7 @@ fun BtwCardValueRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, color = Air, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = Sky, fontWeight = FontWeight.Medium)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = valueColor, fontWeight = FontWeight.Medium)
     }
 }
 

@@ -1,7 +1,10 @@
 package com.tonedefapps.btw.ui.home
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,16 +40,23 @@ import java.util.Locale
 fun HomeScreen(
     onNavigateToRiders: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToLocations: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val requiredPermissions = remember {
+    // Ask for BT only when the user has (or may add) a BT vehicle.
+    // No vehicles yet = fresh install, include BT so pairing works immediately.
+    // Location-only users never see a BT dialog.
+    val needsBluetooth = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+        (uiState.hasBtVehicle || uiState.connectedVehicle == null)
+
+    val requiredPermissions = remember(needsBluetooth) {
         buildList {
             add(Manifest.permission.ACCESS_FINE_LOCATION)
             add(Manifest.permission.ACCESS_COARSE_LOCATION)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (needsBluetooth) {
                 add(Manifest.permission.BLUETOOTH_SCAN)
                 add(Manifest.permission.BLUETOOTH_CONNECT)
             }
@@ -56,7 +67,7 @@ fun HomeScreen(
     val hasLocation = permissionsState.permissions.any {
         it.permission == Manifest.permission.ACCESS_FINE_LOCATION && it.status.isGranted
     }
-    val hasBluetooth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val hasBluetooth = if (needsBluetooth) {
         permissionsState.permissions.any {
             it.permission == Manifest.permission.BLUETOOTH_CONNECT && it.status.isGranted
         }
@@ -65,8 +76,8 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         if (!permissionsState.allPermissionsGranted) permissionsState.launchMultiplePermissionRequest()
     }
-    LaunchedEffect(hasLocation, hasBluetooth) {
-        if (hasLocation && hasBluetooth) viewModel.startMonitor()
+    LaunchedEffect(hasLocation) {
+        if (hasLocation) viewModel.startMonitor()
     }
 
     val bgColor = if (uiState.tripState == TripState.ALERT_TRIGGERED) AlertRed.copy(alpha = 0.08f) else Ink
@@ -88,7 +99,7 @@ fun HomeScreen(
 
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when (uiState.tripState) {
-                    TripState.IDLE -> IdleState(uiState, onNavigateToRiders, onNavigateToSettings)
+                    TripState.IDLE -> IdleState(uiState, onNavigateToRiders, onNavigateToSettings, onNavigateToLocations, hasBluetooth)
                     TripState.IN_VEHICLE -> WatchingState(
                         uiState = uiState,
                         onNavigateToRiders = onNavigateToRiders,
@@ -110,8 +121,11 @@ fun HomeScreen(
 private fun IdleState(
     uiState: HomeUiState,
     onNavigateToRiders: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToLocations: () -> Unit,
+    hasBluetooth: Boolean = true
 ) {
+    val context = LocalContext.current
     val hasVehicle = uiState.connectedVehicle != null
     val needsParkingSpot = uiState.hasLocationOnlyVehicle && !uiState.hasSavedLocations
     val setupComplete = uiState.riders.isNotEmpty() && hasVehicle && !needsParkingSpot
@@ -126,7 +140,7 @@ private fun IdleState(
         uiState.hasLocationOnlyVehicle ->
             "btw notices when you leave one of your known locations"
         else ->
-            "activates automatically when your car's bluetooth connects"
+            "wakes up when your car connects"
     }
 
     Column(
@@ -142,8 +156,8 @@ private fun IdleState(
         ) {
             Text(
                 text = when {
-                    uiState.passiveWatchActive -> "watching for departure"
-                    setupComplete -> "ready to watch"
+                    uiState.passiveWatchActive -> "keeping an eye out"
+                    setupComplete -> "ready"
                     else -> "finish setup to start"
                 },
                 style = MaterialTheme.typography.headlineMedium,
@@ -158,7 +172,7 @@ private fun IdleState(
             )
         }
 
-        if (uiState.riders.isEmpty() || !hasVehicle || needsParkingSpot) {
+        if (uiState.riders.isEmpty() || !hasVehicle || needsParkingSpot || !hasBluetooth) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -186,7 +200,23 @@ private fun IdleState(
                         BtwCardRow(
                             label = "add a known location",
                             sublabel = "add the places you regularly stop so btw knows when you've left",
-                            onClick = onNavigateToSettings
+                            onClick = onNavigateToLocations
+                        )
+                    }
+                }
+                if (!hasBluetooth && !uiState.hasLocationOnlyVehicle && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    BtwCard {
+                        BtwCardRow(
+                            label = "bluetooth access needed",
+                            sublabel = "running in location-only mode · tap to grant access in settings",
+                            onClick = {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                )
+                            }
                         )
                     }
                 }
@@ -407,6 +437,7 @@ private fun AlertState(uiState: HomeUiState, onSafe: () -> Unit, onGoingBack: ()
 
 @Composable
 private fun SafeState(uiState: HomeUiState) {
+    val verb = if (uiState.activeRiderName.contains(" & ")) "are" else "is"
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -414,7 +445,7 @@ private fun SafeState(uiState: HomeUiState) {
     ) {
         BtwStatusPill("all clear", SafeGreen)
         Text(
-            text = "${uiState.activeRiderName} is safe.",
+            text = "${uiState.activeRiderName} $verb safe.",
             style = MaterialTheme.typography.headlineMedium,
             color = Air,
             textAlign = TextAlign.Center

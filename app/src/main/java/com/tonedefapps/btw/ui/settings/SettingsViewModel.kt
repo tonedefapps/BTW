@@ -5,13 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.tonedefapps.btw.domain.model.AlertEvent
 import com.tonedefapps.btw.domain.model.AlertPreferences
 import com.tonedefapps.btw.domain.model.Rider
+import com.tonedefapps.btw.domain.model.RiderSchedule
 import com.tonedefapps.btw.domain.model.RiderType
-import com.tonedefapps.btw.domain.repository.AlertRepository
+import com.tonedefapps.btw.domain.repository.BillingRepository
 import com.tonedefapps.btw.domain.repository.PreferencesRepository
+import com.tonedefapps.btw.domain.repository.RiderRepository
+import com.tonedefapps.btw.domain.repository.RiderScheduleRepository
 import com.tonedefapps.btw.domain.usecase.AddRiderUseCase
 import com.tonedefapps.btw.domain.usecase.GetAlertHistoryUseCase
 import com.tonedefapps.btw.domain.usecase.GetRidersUseCase
-import com.tonedefapps.btw.domain.repository.RiderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +27,8 @@ class SettingsViewModel @Inject constructor(
     getAlertHistoryUseCase: GetAlertHistoryUseCase,
     private val preferencesRepository: PreferencesRepository,
     private val riderRepository: RiderRepository,
+    private val riderScheduleRepository: RiderScheduleRepository,
+    private val billingRepository: BillingRepository,
     private val addRiderUseCase: AddRiderUseCase
 ) : ViewModel() {
 
@@ -36,6 +40,12 @@ class SettingsViewModel @Inject constructor(
 
     val prefs: StateFlow<AlertPreferences> = preferencesRepository.getAlertPreferences()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AlertPreferences())
+
+    val isPremium: StateFlow<Boolean> = billingRepository.isPremium
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val schedules: StateFlow<List<RiderSchedule>> = riderScheduleRepository.getSchedules()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun toggleHotDayMode(enabled: Boolean) {
         viewModelScope.launch {
@@ -61,8 +71,22 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun deleteRider(id: Long) {
-        viewModelScope.launch {
-            riderRepository.deleteRider(id)
-        }
+        viewModelScope.launch { riderRepository.deleteRider(id) }
+    }
+
+    fun pauseRider(id: Long, until: Long) {
+        viewModelScope.launch { riderRepository.pauseRider(id, until) }
+    }
+
+    fun unpauseRider(id: Long) {
+        viewModelScope.launch { riderRepository.unpauseRider(id) }
+    }
+
+    fun upsertSchedule(schedule: RiderSchedule) {
+        viewModelScope.launch { riderScheduleRepository.upsertSchedule(schedule) }
+    }
+
+    fun deleteSchedule(riderId: Long) {
+        viewModelScope.launch { riderScheduleRepository.deleteSchedule(riderId) }
     }
 }

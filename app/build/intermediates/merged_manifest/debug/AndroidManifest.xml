@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.btw.app"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    package="com.tonedefapps.btw"
+    android:versionCode="2"
+    android:versionName="1.1" >
 
     <uses-sdk
         android:minSdkVersion="26"
-        android:targetSdkVersion="34" />
+        android:targetSdkVersion="35" />
 
     <!-- Bluetooth -->
     <uses-permission
@@ -51,17 +51,27 @@
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="false" />
+    <uses-feature android:name="android.software.companion_device_setup" />
+
+    <uses-permission android:name="com.android.vending.BILLING" />
+
+    <queries>
+        <intent>
+            <action android:name="com.android.vending.billing.InAppBillingService.BIND" />
+        </intent>
+    </queries>
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <permission
-        android:name="com.btw.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.tonedefapps.btw.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.btw.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.tonedefapps.btw.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:name="com.btw.app.BtwApplication"
+        android:name="com.tonedefapps.btw.BtwApplication"
         android:allowBackup="false"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -75,7 +85,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Btw" >
         <activity
-            android:name="com.btw.app.MainActivity"
+            android:name="com.tonedefapps.btw.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Btw"
             android:windowSoftInputMode="adjustResize" >
@@ -87,13 +97,13 @@
         </activity>
 
         <service
-            android:name="com.btw.app.service.BtwMonitorService"
+            android:name="com.tonedefapps.btw.service.BtwMonitorService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
 
         <receiver
-            android:name="com.btw.app.service.SmsVerificationReceiver"
+            android:name="com.tonedefapps.btw.service.SmsVerificationReceiver"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BROADCAST_SMS" >
@@ -102,7 +112,7 @@
             </intent-filter>
         </receiver>
         <receiver
-            android:name="com.btw.app.service.BootReceiver"
+            android:name="com.tonedefapps.btw.service.BootReceiver"
             android:enabled="true"
             android:exported="false" >
             <intent-filter>
@@ -112,7 +122,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.btw.app.androidx-startup"
+            android:authorities="com.tonedefapps.btw.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"
@@ -125,6 +135,20 @@
                 android:value="androidx.startup" />
         </provider>
 
+        <meta-data
+            android:name="com.google.android.play.billingclient.version"
+            android:value="7.0.0" />
+
+        <activity
+            android:name="com.android.billingclient.api.ProxyBillingActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="com.android.billingclient.api.ProxyBillingActivityV2"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name="com.google.android.gms.common.api.GoogleApiActivity"
             android:exported="false"
@@ -257,6 +281,23 @@
                 <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
             </intent-filter>
         </receiver>
+
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            android:exported="false" >
+            <meta-data
+                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+                android:value="cct" />
+        </service>
+        <service
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" >
+        </service>
+
+        <receiver
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

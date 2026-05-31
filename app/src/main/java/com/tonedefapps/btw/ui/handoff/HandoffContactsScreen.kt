@@ -35,6 +35,7 @@ fun HandoffContactsScreen(
 
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showAddWindowDialog by remember { mutableStateOf(false) }
+    var showNoLocationsDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -59,7 +60,7 @@ fun HandoffContactsScreen(
 
         if (contacts.isEmpty()) {
             BtwCard {
-                BtwCardRow(label = "no contacts yet", sublabel = "they'll get a text to confirm pickup")
+                BtwCardRow(label = "no contacts yet", sublabel = "add people who share this rider's pickups")
             }
         } else {
             BtwCard {
@@ -79,7 +80,9 @@ fun HandoffContactsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             BtwSectionHeader("pickup windows")
-            IconButton(onClick = { showAddWindowDialog = true }) {
+            IconButton(onClick = {
+                if (locations.isEmpty()) showNoLocationsDialog = true else showAddWindowDialog = true
+            }) {
                 Icon(Icons.Outlined.Add, contentDescription = "add window", tint = Sky)
             }
         }
@@ -116,13 +119,31 @@ fun HandoffContactsScreen(
         )
     }
 
-    if (showAddWindowDialog && locations.isNotEmpty()) {
+    if (showAddWindowDialog) {
         AddWindowDialog(
             locations = locations,
             onDismiss = { showAddWindowDialog = false },
             onAdd = { locationId, days, hour, minute, windowMin ->
                 viewModel.addPickupWindow(riderId, locationId, days, hour, minute, windowMin)
                 showAddWindowDialog = false
+            }
+        )
+    }
+
+    if (showNoLocationsDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoLocationsDialog = false },
+            containerColor = Depth,
+            title = { Text("add a known location first", color = Air, style = MaterialTheme.typography.titleLarge) },
+            text = {
+                Text(
+                    "pickup windows need a location to watch. add one in settings → known locations, then come back here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Sky
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showNoLocationsDialog = false }) { Text("ok", color = Air) }
             }
         )
     }

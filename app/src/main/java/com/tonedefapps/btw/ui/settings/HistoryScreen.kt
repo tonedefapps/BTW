@@ -57,7 +57,7 @@ private fun AlertHistoryCard(event: AlertEvent) {
         AlertOutcome.WENT_BACK -> WarnAmber to "went back"
         AlertOutcome.ESCALATED_SMS -> Sand to "sms sent"
         AlertOutcome.DISMISSED -> Sky to "dismissed"
-        AlertOutcome.PENDING -> Sky to "pending"
+        AlertOutcome.PENDING -> Sky to "no response"
     }
 
     BtwCard {

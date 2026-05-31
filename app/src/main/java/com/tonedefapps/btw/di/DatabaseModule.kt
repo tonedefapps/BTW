@@ -10,6 +10,7 @@ import com.tonedefapps.btw.data.local.dao.AlertDao
 import com.tonedefapps.btw.data.local.dao.HandoffDao
 import com.tonedefapps.btw.data.local.dao.LocationDao
 import com.tonedefapps.btw.data.local.dao.RiderDao
+import com.tonedefapps.btw.data.local.dao.RiderScheduleDao
 import com.tonedefapps.btw.data.local.dao.VehicleDao
 import com.tonedefapps.btw.data.preferences.BtwPreferences
 import dagger.Module
@@ -54,6 +55,7 @@ object DatabaseModule {
     @Provides fun provideAlertDao(db: BtwDatabase): AlertDao = db.alertDao()
     @Provides fun provideLocationDao(db: BtwDatabase): LocationDao = db.locationDao()
     @Provides fun provideHandoffDao(db: BtwDatabase): HandoffDao = db.handoffDao()
+    @Provides fun provideRiderScheduleDao(db: BtwDatabase): RiderScheduleDao = db.riderScheduleDao()
 
     @Provides
     @Singleton

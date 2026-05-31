@@ -26,6 +26,7 @@ import com.tonedefapps.btw.ui.locations.LocationsScreen
 import com.tonedefapps.btw.ui.onboarding.OnboardingScreen
 import com.tonedefapps.btw.ui.paywall.PaywallScreen
 import com.tonedefapps.btw.ui.settings.HistoryScreen
+import com.tonedefapps.btw.ui.settings.RiderScheduleScreen
 import com.tonedefapps.btw.ui.settings.RidersScreen
 import com.tonedefapps.btw.ui.settings.SettingsScreen
 import com.tonedefapps.btw.ui.setup.AddRiderScreen
@@ -162,12 +163,16 @@ fun BtwNavGraph(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    onNavigateToLocations = { navController.navigate(Screen.Locations.route) }
                 )
             }
 
             composable(Screen.Riders.route) {
-                RidersScreen()
+                RidersScreen(
+                    onNavigateToPaywall = { navController.navigate(Screen.Paywall.route) },
+                    onNavigateToSchedule = { riderId -> navController.navigate(Screen.RiderSchedule.route(riderId)) }
+                )
             }
 
             composable(Screen.Settings.route) {
@@ -208,6 +213,13 @@ fun BtwNavGraph(
                     onBack = { navController.popBackStack() },
                     onPurchased = { navController.popBackStack() }
                 )
+            }
+
+            composable(
+                route = Screen.RiderSchedule.route,
+                arguments = listOf(navArgument("riderId") { type = NavType.LongType })
+            ) {
+                RiderScheduleScreen(onBack = { navController.popBackStack() })
             }
         }
     }

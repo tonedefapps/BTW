@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.btw.app-mergeDebugResources-69:/values-zh-rTW/values-zh-rTW.xml",
+            "outputFile": "com.tonedefapps.btw.app-mergeDebugResources-70:/values-zh-rTW/values-zh-rTW.xml",
             "map": [
                 {
                     "source": "/Users/scottfowler/.gradle/caches/transforms-4/3c3b4f35c4c2db5cdd32e47f58ebe187/transformed/play-services-base-18.3.0/res/values-zh-rTW/values.xml",

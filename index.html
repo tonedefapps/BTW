@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>btw... — because they would</title>
+<meta name="description" content="A quiet reminder for the ones who can't speak up. Coming soon.">
+<meta property="og:title" content="btw... because they would">
+<meta property="og:description" content="The passive safety app that speaks up exactly once — at the moment it matters.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:   #1C4A60;
+  --depth: #3A85A8;
+  --sky:   #7BB8D4;
+  --air:   #EAF4FB;
+  --sand:  #C9B49A;
+  --dawn:  #F0E9E1;
+  --air-75: rgba(234,244,251,0.75);
+  --air-50: rgba(234,244,251,0.50);
+  --air-30: rgba(234,244,251,0.30);
+  --sky-30: rgba(123,184,212,0.30);
+  --sky-15: rgba(123,184,212,0.15);
+  --depth-15: rgba(58,133,168,0.15);
+}
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+body {
+  background: var(--ink);
+  color: var(--air);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Soft radial glow */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(58,133,168,0.18) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 40% at 90% 90%, rgba(123,184,212,0.07) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 5rem 2rem 6rem;
+}
+
+/* ── NAV ── */
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7rem;
+  animation: fade-in 0.8s ease both;
+}
+
+.nav-wordmark {
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--air);
+  letter-spacing: -0.01em;
+}
+
+.nav-wordmark .ellipsis { color: var(--sky); }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--sky-15);
+  border: 1px solid var(--sky-30);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sky);
+}
+
+.pill-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sky);
+  animation: pulse 2.6s ease infinite;
+}
+
+/* ── HERO ── */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  margin-bottom: 8rem;
+}
+
+.hero-left { animation: fade-up 0.9s ease 0.1s both; }
+
+.hero-wordmark {
+  font-size: clamp(3.5rem, 9vw, 6rem);
+  font-weight: 300;
+  color: var(--air);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 1.5rem;
+}
+
+.hero-wordmark .ellipsis { color: var(--sky); }
+
+.hero-tagline {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--sky);
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  margin-bottom: 2rem;
+}
+
+.hero-desc {
+  font-size: 1.05rem;
+  font-weight: 300;
+  color: var(--air-75);
+  line-height: 1.75;
+  max-width: 380px;
+  margin-bottom: 2.5rem;
+}
+
+/* ── EMAIL CAPTURE ── */
+.notify-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 340px;
+}
+
+.notify-row {
+  display: flex;
+  gap: 8px;
+}
+
+.notify-input {
+  flex: 1;
+  background: rgba(234,244,251,0.06);
+  border: 1px solid var(--sky-30);
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--air);
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 0;
+}
+
+.notify-input::placeholder { color: var(--air-30); }
+.notify-input:focus { border-color: var(--sky); }
+
+.notify-btn {
+  background: var(--depth);
+  border: none;
+  border-radius: 999px;
+  padding: 11px 20px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--air);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.notify-btn:hover { background: var(--sky); }
+.notify-btn:active { transform: scale(0.97); }
+
+.notify-note {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--air-50);
+  padding-left: 4px;
+}
+
+.notify-success {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--sky);
+  padding: 11px 0;
+}
+
+/* ── PHONE MOCKUP ── */
+.hero-right {
+  display: flex;
+  justify-content: center;
+  animation: fade-up 0.9s ease 0.25s both;
+}
+
+.phone {
+  width: 220px;
+  background: #0f2e3e;
+  border-radius: 36px;
+  border: 1px solid rgba(123,184,212,0.2);
+  overflow: hidden;
+  box-shadow:
+    0 40px 80px rgba(0,0,0,0.4),
+    0 0 0 6px rgba(28,74,96,0.8),
+    inset 0 0 0 1px rgba(123,184,212,0.08);
+  padding: 0;
+  position: relative;
+}
+
+.phone-notch {
+  width: 70px;
+  height: 22px;
+  background: #0f2e3e;
+  border-radius: 0 0 16px 16px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  border-bottom: 1px solid rgba(123,184,212,0.08);
+}
+
+.phone-screen {
+  padding: 16px 16px 24px;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Phone header */
+.ph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ph-wordmark {
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--air);
+  letter-spacing: -0.01em;
+}
+
+.ph-wordmark .ellipsis { color: var(--sky); }
+
+.ph-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--sky);
+  letter-spacing: 0.05em;
+}
+
+.ph-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sand);
+  animation: pulse 2.6s ease infinite;
+}
+
+/* Who's with you */
+.ph-section-label {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--sky);
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  margin-bottom: 6px;
+}
+
+.ph-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ph-chip {
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 10px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ph-chip.active {
+  background: var(--depth);
+  color: var(--air);
+}
+
+.ph-chip.inactive {
+  background: transparent;
+  border: 1px solid var(--sky-30);
+  color: var(--sky);
+}
+
+.chip-name { color: var(--sand); font-weight: 400; }
+.ph-chip.active .chip-name { color: var(--sand); }
+
+/* Nudge card */
+.ph-nudge {
+  background: var(--depth-15);
+  border: 1px solid var(--sky-30);
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-top: 4px;
+}
+
+.ph-nudge-label {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--sky);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ph-nudge-msg {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--air);
+  line-height: 1.5;
+}
+
+.ph-nudge-name { color: var(--sand); font-weight: 400; }
+
+.ph-nudge-sub {
+  font-size: 10px;
+  font-weight: 300;
+  color: var(--air-50);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.ph-nudge-sub .sub-name { color: var(--sand); font-weight: 400; opacity: 0.8; }
+
+/* Status bar at bottom of phone */
+.ph-bottom {
+  margin-top: auto;
+  background: rgba(58,133,168,0.08);
+  border: 1px solid var(--sky-15);
+  border-radius: 12px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ph-bottom-label {
+  font-size: 9px;
+  font-weight: 300;
+  color: var(--air-50);
+}
+
+.ph-bottom-val {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--sky);
+}
+
+/* ── SECTION: How it works ── */
+.section {
+  margin-bottom: 7rem;
+  animation: fade-up 0.9s ease 0.3s both;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--sky);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  margin-bottom: 1.5rem;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--sky-15);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--sky-15);
+}
+
+.step {
+  background: rgba(28,74,96,0.6);
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step-num {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--sky);
+  letter-spacing: 0.1em;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--air);
+  line-height: 1.4;
+}
+
+.step-desc {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--air-50);
+  line-height: 1.6;
+}
+
+/* ── SECTION: Three screens ── */
+.screens-section {
+  margin-bottom: 7rem;
+  animation: fade-up 0.9s ease 0.35s both;
+}
+
+.screens-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.screen-item { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+
+.screen-caption {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--air-75);
+  line-height: 1.5;
+}
+
+.screen-caption strong {
+  display: block;
+  font-weight: 400;
+  color: var(--air);
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+/* Mini phone */
+.mini-phone {
+  width: 140px;
+  background: #0f2e3e;
+  border-radius: 24px;
+  border: 1px solid rgba(123,184,212,0.2);
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35), 0 0 0 4px rgba(28,74,96,0.8);
+  padding-bottom: 12px;
+}
+
+.mini-notch {
+  width: 44px;
+  height: 14px;
+  background: #0f2e3e;
+  border-radius: 0 0 10px 10px;
+  margin: 0 auto 10px;
+  border-bottom: 1px solid rgba(123,184,212,0.08);
+}
+
+.mini-screen { padding: 0 10px; }
+
+/* Onboarding screen */
+.mini-onboard { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 4px; }
+.mini-wordmark { font-size: 22px; font-weight: 300; color: var(--air); letter-spacing: -0.02em; }
+.mini-wordmark .ellipsis { color: var(--sky); }
+.mini-eyebrow { font-size: 7px; font-weight: 400; color: var(--sky); letter-spacing: 0.1em; text-transform: lowercase; }
+.mini-headline { font-size: 10px; font-weight: 300; color: var(--air); line-height: 1.5; }
+.mini-headline .sand { color: var(--sand); font-weight: 400; }
+.mini-sub { font-size: 8px; font-weight: 300; color: var(--air-50); line-height: 1.5; }
+.mini-btn {
+  background: var(--depth);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 8px;
+  font-weight: 400;
+  color: var(--air);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Setup screen */
+.mini-setup { display: flex; flex-direction: column; gap: 7px; padding: 0 10px 4px; }
+.mini-setup-title { font-size: 9px; font-weight: 300; color: var(--air); }
+.mini-chip-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.mini-chip {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 7px;
+  font-weight: 400;
+}
+.mini-chip.a { background: var(--depth); color: var(--air); }
+.mini-chip.a .cn { color: var(--sand); }
+.mini-chip.i { background: transparent; border: 1px solid var(--sky-30); color: var(--sky); }
+.mini-vehicle {
+  background: var(--sky-15);
+  border: 1px solid var(--sky-30);
+  border-radius: 10px;
+  padding: 7px 8px;
+  font-size: 7px;
+  font-weight: 300;
+  color: var(--air-75);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mini-vehicle .vname { color: var(--air); font-weight: 400; }
+.mini-connected { font-size: 7px; color: var(--sky); }
+
+/* Alert screen */
+.mini-alert { display: flex; flex-direction: column; gap: 7px; padding: 0 10px 4px; }
+.mini-alert-card {
+  background: var(--depth-15);
+  border: 1px solid var(--sky-30);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.mini-alert-label { font-size: 7px; font-weight: 400; color: var(--sky); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+.mini-alert-msg { font-size: 9px; font-weight: 300; color: var(--air); line-height: 1.5; }
+.mini-alert-msg .sn { color: var(--sand); font-weight: 400; }
+.mini-alert-sub { font-size: 7px; font-weight: 300; color: var(--air-50); margin-top: 3px; line-height: 1.4; }
+.mini-alert-sub .sn { color: var(--sand); opacity: 0.8; font-weight: 400; }
+.mini-safe-btn {
+  background: rgba(58,133,168,0.2);
+  border: 1px solid var(--sky-30);
+  border-radius: 999px;
+  padding: 6px;
+  font-size: 7px;
+  font-weight: 400;
+  color: var(--sky);
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* ── PRIVACY BAR ── */
+.privacy-section {
+  margin-bottom: 5rem;
+  animation: fade-up 0.9s ease 0.4s both;
+}
+
+.privacy-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid var(--sky-15);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.privacy-item {
+  flex: 1;
+  min-width: 140px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid var(--sky-15);
+}
+
+.privacy-item:last-child { border-right: none; }
+
+.privacy-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(123,184,212,0.1);
+  border: 1px solid var(--sky-30);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.privacy-check::after {
+  content: '';
+  width: 6px;
+  height: 4px;
+  border-left: 1.5px solid var(--sky);
+  border-bottom: 1.5px solid var(--sky);
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
+.privacy-title {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--air);
+  line-height: 1.3;
+}
+
+.privacy-desc {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--air-50);
+  line-height: 1.5;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--sky-15);
+  padding-top: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: fade-in 1s ease 0.5s both;
+}
+
+.footer-wordmark {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--air-50);
+}
+
+.footer-wordmark .ellipsis { color: var(--sky); }
+
+.footer-copy {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--air-30);
+}
+
+/* ── Animations ── */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ── Responsive ── */
+@media (max-width: 680px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-right { display: none; }
+  .steps { grid-template-columns: 1fr; }
+  .screens-row { grid-template-columns: 1fr; }
+  .screen-item { flex-direction: row; align-items: center; gap: 1.5rem; }
+  .screen-caption { text-align: left; }
+  .privacy-item { min-width: 100%; border-right: none; border-bottom: 1px solid var(--sky-15); }
+  .privacy-item:last-child { border-bottom: none; }
+  footer { flex-direction: column; gap: 1rem; text-align: center; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- NAV -->
+  <nav>
+    <span class="nav-wordmark">btw<span class="ellipsis">...</span></span>
+    <div class="pill"><span class="pill-dot"></span> coming soon</div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-wordmark">btw<span class="ellipsis">...</span></div>
+      <div class="hero-tagline">because they would</div>
+      <p class="hero-desc">
+        A quiet reminder for the ones who can't speak up.
+        No hardware. No subscription. No alarm.
+        Just a gentle nudge at the moment it matters.
+      </p>
+
+      <div class="notify-wrap">
+        <div class="notify-row" id="form-row">
+          <input class="notify-input" type="email" id="email-input" placeholder="your@email.com" autocomplete="email">
+          <button class="notify-btn" onclick="handleNotify()">notify me</button>
+        </div>
+        <div class="notify-success" id="success-msg">
+          <span style="color:var(--sky)">✓</span>&nbsp; you're on the list
+        </div>
+        <p class="notify-note">one email when btw... is ready. nothing else.</p>
+      </div>
+    </div>
+
+    <!-- HERO PHONE -->
+    <div class="hero-right">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+
+          <div class="ph-header">
+            <span class="ph-wordmark">btw<span class="ellipsis">...</span></span>
+            <span class="ph-status"><span class="ph-dot"></span> watching</span>
+          </div>
+
+          <div>
+            <div class="ph-section-label">who's with you</div>
+            <div class="ph-chips">
+              <div class="ph-chip active"><span class="chip-name">Mango</span> 🐕</div>
+              <div class="ph-chip inactive">add</div>
+            </div>
+          </div>
+
+          <div class="ph-nudge">
+            <div class="ph-nudge-label">btw...</div>
+            <div class="ph-nudge-msg">
+              is <span class="ph-nudge-name">Mango</span> still in the car?
+            </div>
+            <div class="ph-nudge-sub">
+              hey... <span class="sub-name">Mango</span> would remind you if he could.
+            </div>
+          </div>
+
+          <div class="ph-bottom">
+            <span class="ph-bottom-label">disconnected from</span>
+            <span class="ph-bottom-val">Scott's Tahoe</span>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section">
+    <div class="section-label">how it works</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">bluetooth disconnect</div>
+        <div class="step-desc">the moment your phone loses your vehicle's signal, btw... wakes up</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">gps confirms</div>
+        <div class="step-desc">you've moved away from where the car is parked — not just a quick walk-around</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">one quiet nudge</div>
+        <div class="step-desc">if all three signals agree, btw... leans over and asks. no alarm. just a tap.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THREE SCREENS -->
+  <section class="screens-section">
+    <div class="section-label">a look inside</div>
+    <div class="screens-row">
+
+      <!-- Screen 1: Setup -->
+      <div class="screen-item">
+        <div class="mini-phone">
+          <div class="mini-notch"></div>
+          <div class="mini-screen">
+            <div class="mini-setup">
+              <div class="mini-eyebrow">who's with you today</div>
+              <div class="mini-chip-row">
+                <div class="mini-chip a"><span class="cn">Lily</span> 🐈</div>
+                <div class="mini-chip a"><span class="cn">Noah</span> 👦</div>
+                <div class="mini-chip i">+ add</div>
+              </div>
+              <div style="margin-top:4px">
+                <div class="mini-eyebrow">connected vehicle</div>
+                <div class="mini-vehicle">
+                  <span class="vname">Honda CRV</span>
+                  <span class="mini-connected">● connected</span>
+                </div>
+              </div>
+              <div class="mini-btn">start watching</div>
+            </div>
+          </div>
+        </div>
+        <div class="screen-caption">
+          <strong>tell btw... who's along</strong>
+          tap once before you drive. that's the whole setup.
+        </div>
+      </div>
+
+      <!-- Screen 2: Watching -->
+      <div class="screen-item">
+        <div class="mini-phone">
+          <div class="mini-notch"></div>
+          <div class="mini-screen">
+            <div class="mini-onboard">
+              <div class="mini-wordmark">btw<span class="ellipsis">...</span></div>
+              <div class="mini-eyebrow" style="margin-top:2px">quietly watching</div>
+              <div style="height:1px; background: var(--sky-15); margin: 4px 0;"></div>
+              <div class="mini-headline">with you today<br><span class="sand">Lily</span> and <span class="sand">Noah</span></div>
+              <div class="mini-sub">connected to Honda CRV<br>everything looks good</div>
+              <div style="margin-top:6px; background: var(--sky-15); border-radius:8px; padding:6px 8px;">
+                <div style="font-size:7px; color:var(--sky); font-weight:400; letter-spacing:0.08em;">no cloud · no data · no account</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screen-caption">
+          <strong>runs silently in the background</strong>
+          you won't notice it until you need it.
+        </div>
+      </div>
+
+      <!-- Screen 3: Nudge -->
+      <div class="screen-item">
+        <div class="mini-phone">
+          <div class="mini-notch"></div>
+          <div class="mini-screen">
+            <div class="mini-alert">
+              <div class="mini-eyebrow">btw...</div>
+              <div class="mini-alert-card">
+                <div class="mini-alert-label">btw...</div>
+                <div class="mini-alert-msg">is <span class="sn">Lily</span> still in the car?</div>
+                <div class="mini-alert-sub">hey... <span class="sn">Lily</span> would remind you if she could.</div>
+              </div>
+              <div class="mini-safe-btn">we're all good</div>
+              <div style="margin-top:4px; font-size:7px; font-weight:300; color:var(--air-30); text-align:center; line-height:1.5;">
+                if you don't respond,<br>btw... will keep asking
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screen-caption">
+          <strong>one gentle nudge</strong>
+          not an alarm. a friend leaning over.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PRIVACY BAR -->
+  <section class="privacy-section">
+    <div class="privacy-bar">
+      <div class="privacy-item">
+        <div class="privacy-check"></div>
+        <div class="privacy-title">no cloud storage</div>
+        <div class="privacy-desc">everything lives on your device. always.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-check"></div>
+        <div class="privacy-title">no account required</div>
+        <div class="privacy-desc">no email, no sign-up, no identity.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-check"></div>
+        <div class="privacy-title">zero data collected</div>
+        <div class="privacy-desc">nothing leaves your phone. nothing.</div>
+      </div>
+      <div class="privacy-item">
+        <div class="privacy-check"></div>
+        <div class="privacy-title">no ads. ever.</div>
+        <div class="privacy-desc">not now. not later. not ever.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-wordmark">btw<span class="ellipsis">...</span></span>
+    <span class="footer-copy">&copy; 2025 btw... · <a href="/privacy" style="color:inherit;text-decoration:none;opacity:0.7;">privacy policy</a></span>
+  </footer>
+
+</div>
+
+<script>
+function handleNotify() {
+  const input = document.getElementById('email-input');
+  const val = input.value.trim();
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRe.test(val)) {
+    input.style.borderColor = 'rgba(123,184,212,0.7)';
+    input.focus();
+    setTimeout(() => { input.style.borderColor = ''; }, 1500);
+    return;
+  }
+  document.getElementById('form-row').style.display = 'none';
+  document.getElementById('success-msg').style.display = 'flex';
+}
+document.getElementById('email-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleNotify();
+});
+</script>
+</body>
+</html>

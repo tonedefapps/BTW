@@ -1,26 +1,26 @@
 [
     {
-        "merged": "com.btw.app-merged_res-71:/xml_data_extraction_rules.xml.flat",
-        "source": "com.btw.app-main-73:/xml/data_extraction_rules.xml"
+        "merged": "com.tonedefapps.btw.app-merged_res-72:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.tonedefapps.btw.app-main-74:/mipmap-anydpi-v26/ic_launcher_round.xml"
     },
     {
-        "merged": "com.btw.app-merged_res-71:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.btw.app-main-73:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "com.tonedefapps.btw.app-merged_res-72:/xml_network_security_config.xml.flat",
+        "source": "com.tonedefapps.btw.app-main-74:/xml/network_security_config.xml"
     },
     {
-        "merged": "com.btw.app-merged_res-71:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.btw.app-main-73:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "com.tonedefapps.btw.app-merged_res-72:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.tonedefapps.btw.app-main-74:/drawable/ic_launcher_foreground.xml"
     },
     {
-        "merged": "com.btw.app-merged_res-71:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.btw.app-main-73:/drawable/ic_launcher_background.xml"
+        "merged": "com.tonedefapps.btw.app-merged_res-72:/xml_data_extraction_rules.xml.flat",
+        "source": "com.tonedefapps.btw.app-main-74:/xml/data_extraction_rules.xml"
     },
     {
-        "merged": "com.btw.app-merged_res-71:/xml_network_security_config.xml.flat",
-        "source": "com.btw.app-main-73:/xml/network_security_config.xml"
+        "merged": "com.tonedefapps.btw.app-merged_res-72:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.tonedefapps.btw.app-main-74:/drawable/ic_launcher_background.xml"
     },
     {
-        "merged": "com.btw.app-merged_res-71:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.btw.app-main-73:/drawable/ic_launcher_foreground.xml"
+        "merged": "com.tonedefapps.btw.app-merged_res-72:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.tonedefapps.btw.app-main-74:/mipmap-anydpi-v26/ic_launcher.xml"
     }
 ]

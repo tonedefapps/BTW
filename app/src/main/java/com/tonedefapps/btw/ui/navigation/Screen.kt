@@ -19,4 +19,8 @@ sealed class Screen(val route: String) {
 
     object Paywall : Screen("paywall")
     object Vehicles : Screen("vehicles")
+
+    object RiderSchedule : Screen("rider_schedule/{riderId}") {
+        fun route(riderId: Long) = "rider_schedule/$riderId"
+    }
 }

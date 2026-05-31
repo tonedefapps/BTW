@@ -65,7 +65,7 @@ class HandoffMonitorWorker @AssistedInject constructor(
         }
 
         // Notify the primary user
-        showHandoffNotification(rider.name, location.label, eventId)
+        showHandoffNotification(rider.name, location.label, riderId, eventId)
 
         // SMS handoff contacts — requires premium
         val isPremium = preferences.alertPreferences.first().isPremium
@@ -112,7 +112,7 @@ class HandoffMonitorWorker @AssistedInject constructor(
         return Result.success()
     }
 
-    private fun showHandoffNotification(riderName: String, locationLabel: String, eventId: Long) {
+    private fun showHandoffNotification(riderName: String, locationLabel: String, riderId: Long, eventId: Long) {
         val nm = applicationContext.getSystemService(NotificationManager::class.java)
         val openIntent = PendingIntent.getActivity(
             applicationContext, 0,
@@ -122,12 +122,22 @@ class HandoffMonitorWorker @AssistedInject constructor(
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val confirmIntent = PendingIntent.getService(
+            applicationContext, NOTIFICATION_ID_HANDOFF,
+            Intent(applicationContext, BtwMonitorService::class.java).apply {
+                action = BtwMonitorService.ACTION_HANDOFF_CONFIRMED
+                putExtra(BtwMonitorService.EXTRA_HANDOFF_EVENT_ID, eventId)
+                putExtra(BtwMonitorService.EXTRA_HANDOFF_RIDER_ID, riderId)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         val notification = NotificationCompat.Builder(applicationContext, BtwMonitorService.CHANNEL_ALERT)
             .setContentTitle("btw...")
             .setContentText("$riderName pickup expected at $locationLabel")
             .setSmallIcon(com.tonedefapps.btw.R.drawable.ic_notification)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(openIntent)
+            .addAction(0, "confirmed ✓", confirmIntent)
             .setAutoCancel(true)
             .build()
         nm.notify(NOTIFICATION_ID_HANDOFF, notification)

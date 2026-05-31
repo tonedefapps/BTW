@@ -1,6 +1,8 @@
+# SQLCipher native library
 -keep class net.sqlcipher.** { *; }
 -keep class net.sqlcipher.database.** { *; }
+
+# Standard — required by Hilt, Room, WorkManager, and Kotlin reflection
 -keepattributes *Annotation*
--keepclassmembers class * {
-    @com.google.gson.annotations.SerializedName <fields>;
-}
+-keepattributes Signature
+-keepattributes EnclosingMethod

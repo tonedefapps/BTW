@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.btw.app-mergeDebugResources-69:/values/values.xml",
+            "outputFile": "com.tonedefapps.btw.app-mergeDebugResources-70:/values/values.xml",
             "map": [
                 {
                     "source": "/Users/scottfowler/.gradle/caches/transforms-4/d5210f6ed683d675dd2944349e43b086/transformed/navigation-runtime-2.7.7/res/values/values.xml",

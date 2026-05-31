@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>btw... store icon export</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1f28;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 28px;
+    font-family: -apple-system, system-ui, sans-serif;
+  }
+  canvas { border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.5); }
+  .label {
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(123,184,212,0.6);
+    letter-spacing: 0.08em;
+  }
+  button {
+    background: #3A85A8;
+    color: #EAF4FB;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: #7BB8D4; color: #1C4A60; }
+  .note {
+    font-size: 11px;
+    color: rgba(123,184,212,0.4);
+    text-align: center;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<p class="label">btw... · play store icon · 512 × 512</p>
+
+<canvas id="icon" width="512" height="512"></canvas>
+
+<button onclick="download()">download 512×512 PNG</button>
+
+<p class="note">
+  Play Console → btw... → Store presence → Main store listing → App icon<br>
+  upload the downloaded PNG there
+</p>
+
+<script>
+const canvas = document.getElementById('icon');
+const ctx = canvas.getContext('2d');
+
+// ── Background — squircle (matches Google Play icon mask) ──────────────────
+function squirclePath(size, radius) {
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(size - radius, 0);
+  ctx.quadraticCurveTo(size, 0, size, radius);
+  ctx.lineTo(size, size - radius);
+  ctx.quadraticCurveTo(size, size, size - radius, size);
+  ctx.lineTo(radius, size);
+  ctx.quadraticCurveTo(0, size, 0, size - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+}
+
+squirclePath(512, 115);
+ctx.fillStyle = '#1C4A60';
+ctx.fill();
+
+// ── Three dots — btw... ───────────────────────────────────────────────────
+const dotR  = 44;
+const gap   = 22;
+const totalW = dotR * 6 + gap * 2;
+const x0    = (512 - totalW) / 2 + dotR;  // center of dot 1
+const cy    = 256;
+
+// Dot 1 — Sky
+ctx.beginPath();
+ctx.arc(x0, cy, dotR, 0, Math.PI * 2);
+ctx.fillStyle = '#7BB8D4';
+ctx.fill();
+
+// Dot 2 — Sky
+ctx.beginPath();
+ctx.arc(x0 + dotR * 2 + gap, cy, dotR, 0, Math.PI * 2);
+ctx.fillStyle = '#7BB8D4';
+ctx.fill();
+
+// Dot 3 — Air (lighter, matching the brand ellipsis)
+ctx.beginPath();
+ctx.arc(x0 + dotR * 4 + gap * 2, cy, dotR, 0, Math.PI * 2);
+ctx.fillStyle = '#EAF4FB';
+ctx.fill();
+
+// ── Download ──────────────────────────────────────────────────────────────
+function download() {
+  const a = document.createElement('a');
+  a.download = 'btw-store-icon-512.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+</script>
+</body>
+</html>

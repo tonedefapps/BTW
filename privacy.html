@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>btw... — privacy policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #1C4A60; --depth: #3A85A8; --sky: #7BB8D4;
+  --air: #EAF4FB; --sand: #C9B49A;
+}
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  background: var(--ink); color: var(--air);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 300; min-height: 100vh;
+}
+.page { max-width: 680px; margin: 0 auto; padding: 5rem 2rem 6rem; }
+nav { margin-bottom: 4rem; }
+.nav-wordmark { font-size: 18px; font-weight: 300; color: var(--air); letter-spacing: -0.01em; text-decoration: none; }
+.nav-wordmark .e { color: var(--sky); }
+h1 { font-size: 2rem; font-weight: 300; color: var(--air); margin-bottom: 0.5rem; }
+.subtitle { font-size: 13px; font-weight: 400; color: var(--sky); letter-spacing: 0.06em; margin-bottom: 3rem; }
+h2 { font-size: 14px; font-weight: 400; color: var(--sky); letter-spacing: 0.08em; text-transform: lowercase; margin: 2.5rem 0 0.75rem; }
+p { font-size: 15px; font-weight: 300; color: rgba(234,244,251,0.8); line-height: 1.8; margin-bottom: 1rem; }
+ul { padding-left: 1.25rem; margin-bottom: 1rem; }
+li { font-size: 15px; font-weight: 300; color: rgba(234,244,251,0.8); line-height: 1.8; margin-bottom: 0.25rem; }
+.highlight {
+  background: rgba(58,133,168,0.12); border: 1px solid rgba(123,184,212,0.2);
+  border-radius: 12px; padding: 1.25rem 1.5rem; margin: 2rem 0;
+}
+.highlight p { margin: 0; font-size: 14px; color: var(--air); }
+a { color: var(--sky); text-decoration: none; }
+a:hover { text-decoration: underline; }
+footer { border-top: 1px solid rgba(123,184,212,0.15); padding-top: 2rem; margin-top: 4rem; font-size: 11px; font-weight: 300; color: rgba(234,244,251,0.3); }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav>
+    <a class="nav-wordmark" href="/">btw<span class="e">...</span></a>
+  </nav>
+
+  <h1>privacy policy</h1>
+  <p class="subtitle">effective may 2025</p>
+
+  <div class="highlight">
+    <p>btw... collects no data, shares no data, and requires no account. everything the app does stays on your device. always.</p>
+  </div>
+
+  <h2>what we collect</h2>
+  <p>Nothing. btw... does not collect, transmit, or store any personal information on any server. There is no server. The app has no internet connection — by design.</p>
+
+  <h2>what stays on your device</h2>
+  <p>The following information is stored locally on your device only, encrypted, and never leaves it:</p>
+  <ul>
+    <li>Names and emoji you assign to riders (children, pets, etc.)</li>
+    <li>Bluetooth device names and addresses of vehicles you pair</li>
+    <li>Names you give to saved locations</li>
+    <li>Alert history (timestamps, outcomes)</li>
+    <li>Your alert preferences and escalation settings</li>
+    <li>Emergency contact name and phone number (if you add one)</li>
+  </ul>
+  <p>All of this is encrypted on your device using SQLCipher. Android's cloud backup is disabled — this data never syncs to Google Drive or any backup service.</p>
+
+  <h2>permissions we request and why</h2>
+  <ul>
+    <li><strong>Bluetooth</strong> — to detect when your phone disconnects from your vehicle's audio system, which is the trigger for the app's core function.</li>
+    <li><strong>Location (foreground &amp; background)</strong> — to confirm you've moved away from where the car is parked before sending any alert, and to track named locations you set up. Background location is required so the app can check your position after a Bluetooth disconnect even when the phone is locked.</li>
+    <li><strong>Notifications</strong> — to deliver the gentle nudge when a potential situation is detected.</li>
+    <li><strong>Send SMS (optional, premium)</strong> — to send a single emergency alert to a contact you configure, if you don't respond to the in-app alert. You control this contact. No SMS is ever sent without the triple-trigger conditions being met.</li>
+    <li><strong>Foreground service</strong> — to keep the monitor running reliably while your phone is locked.</li>
+    <li><strong>Receive boot completed</strong> — to restart the monitor automatically after your phone restarts.</li>
+  </ul>
+
+  <h2>third-party services</h2>
+  <p>btw... uses <strong>Google Play Billing</strong> to process premium purchases. We do not receive your payment information — all billing is handled entirely by Google. Google's privacy policy applies to that transaction.</p>
+  <p>The app uses Google's Fused Location Provider (part of Google Play Services) to get GPS coordinates. This runs on-device and we do not receive any location data from it — it is processed locally.</p>
+  <p>No analytics, no crash reporting, no advertising SDKs, and no other third-party services are used.</p>
+
+  <h2>children</h2>
+  <p>btw... is designed for use by adults (parents, caregivers, pet owners). It is not directed at children. We do not knowingly collect any information from children.</p>
+
+  <h2>data deletion</h2>
+  <p>All data stored by btw... is on your device. To delete it, clear the app's data in your Android settings or uninstall the app.</p>
+
+  <h2>changes to this policy</h2>
+  <p>If we ever update this policy, we'll post the revised version here with an updated effective date. Given that we collect nothing, we don't anticipate meaningful changes.</p>
+
+  <h2>contact</h2>
+  <p>Questions? Reach us at <a href="mailto:hello@tonedefapps.com">hello@tonedefapps.com</a></p>
+
+  <footer>
+    &copy; 2025 btw... &middot; <a href="/">becausetheywould.app</a>
+  </footer>
+</div>
+</body>
+</html>

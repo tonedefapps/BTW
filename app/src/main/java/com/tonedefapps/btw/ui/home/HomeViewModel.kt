@@ -33,6 +33,7 @@ data class HomeUiState(
     val recentAlerts: List<AlertEvent> = emptyList(),
     val tripStartedAt: Long? = null,
     val hasLocationOnlyVehicle: Boolean = false,
+    val hasBtVehicle: Boolean = false,
     val passiveWatchActive: Boolean = false,
     val hasSavedLocations: Boolean = false
 )
@@ -94,10 +95,13 @@ class HomeViewModel @Inject constructor(
             activeRiders = activeRiders,
             pausedRiders = pausedRiders,
             activeAlertId = activeAlertId,
-            activeRiderName = activeRiders.firstOrNull()?.name ?: riders.firstOrNull()?.name ?: "",
+            activeRiderName = activeRiders.map { it.name }.let { names ->
+                if (names.isEmpty()) riders.firstOrNull()?.name ?: "" else names.joinToString(" & ")
+            },
             recentAlerts = todayAlerts,
             tripStartedAt = extra.tripStart,
             hasLocationOnlyVehicle = vehicles.any { it.isLocationOnly },
+            hasBtVehicle = vehicles.any { !it.isLocationOnly },
             passiveWatchActive = extra.passiveWatch,
             hasSavedLocations = extra.locations.isNotEmpty()
         )

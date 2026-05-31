@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>btw... feature graphic export — 1024×500</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d1f28;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 28px;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+  canvas { border-radius: 8px; box-shadow: 0 24px 60px rgba(0,0,0,0.5); max-width: 100%; }
+  .label { font-size: 12px; color: rgba(123,184,212,0.6); letter-spacing: 0.08em; }
+  button {
+    background: #3A85A8; color: #EAF4FB; border: none;
+    padding: 12px 32px; border-radius: 999px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: background 0.15s;
+  }
+  button:hover { background: #7BB8D4; color: #1C4A60; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .note { font-size: 11px; color: rgba(123,184,212,0.4); text-align: center; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<p class="label">btw... · play store feature graphic · 1024 × 500</p>
+
+<canvas id="fg" width="1024" height="500"></canvas>
+
+<button id="btn" onclick="download()" disabled>loading font…</button>
+
+<p class="note">
+  Play Console → Store presence → Main store listing → Graphics → Feature graphic<br>
+  upload the downloaded PNG there (1024×500, no alpha required)
+</p>
+
+<script>
+const canvas = document.getElementById('fg');
+const ctx = canvas.getContext('2d');
+const W = 1024, H = 500;
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Background ──────────────────────────────────────────────────────────
+  ctx.fillStyle = '#1C4A60';
+  ctx.fillRect(0, 0, W, H);
+
+  // Radial glow — top center
+  const glow = ctx.createRadialGradient(W * 0.38, 0, 0, W * 0.38, 0, H * 1.1);
+  glow.addColorStop(0, 'rgba(58,133,168,0.22)');
+  glow.addColorStop(1, 'rgba(58,133,168,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Decorative dots — right side ─────────────────────────────────────────
+  const dotR = 90;
+  const gap  = 30;
+  const dotsX = W - 220;
+  const dotsY = H / 2;
+
+  // Outer ring — very faint
+  [dotsX - dotR * 2 - gap, dotsX, dotsX + dotR * 2 + gap].forEach(cx => {
+    ctx.beginPath();
+    ctx.arc(cx, dotsY, dotR + 28, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(123,184,212,0.06)';
+    ctx.fill();
+  });
+
+  // Dot 1 — Sky
+  ctx.beginPath();
+  ctx.arc(dotsX - dotR * 2 - gap, dotsY, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(123,184,212,0.35)';
+  ctx.fill();
+
+  // Dot 2 — Sky slightly brighter
+  ctx.beginPath();
+  ctx.arc(dotsX, dotsY, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(123,184,212,0.45)';
+  ctx.fill();
+
+  // Dot 3 — Air (lighter)
+  ctx.beginPath();
+  ctx.arc(dotsX + dotR * 2 + gap, dotsY, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(234,244,251,0.25)';
+  ctx.fill();
+
+  // ── Wordmark ─────────────────────────────────────────────────────────────
+  const leftX = 88;
+  const wordmarkY = 210;
+
+  ctx.font = '300 112px "DM Sans"';
+  ctx.textBaseline = 'alphabetic';
+
+  // "btw" in Air
+  ctx.fillStyle = '#EAF4FB';
+  ctx.fillText('btw', leftX, wordmarkY);
+  const btwW = ctx.measureText('btw').width;
+
+  // "..." in Sky
+  ctx.fillStyle = '#7BB8D4';
+  ctx.fillText('...', leftX + btwW, wordmarkY);
+
+  // ── Tagline ───────────────────────────────────────────────────────────────
+  ctx.font = '300 28px "DM Sans"';
+  ctx.fillStyle = 'rgba(123,184,212,0.75)';
+  ctx.letterSpacing = '0.06em';
+  ctx.fillText('because they would', leftX + 2, wordmarkY + 56);
+
+  // ── Privacy line ──────────────────────────────────────────────────────────
+  ctx.font = '300 15px "DM Sans"';
+  ctx.fillStyle = 'rgba(123,184,212,0.38)';
+  ctx.fillText('no cloud  ·  no account  ·  no data', leftX + 2, wordmarkY + 100);
+}
+
+function download() {
+  const a = document.createElement('a');
+  a.download = 'btw-feature-graphic-1024x500.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// Wait for DM Sans to load before drawing
+document.fonts.ready.then(() => {
+  draw();
+  const btn = document.getElementById('btn');
+  btn.textContent = 'download 1024×500 PNG';
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-com.btw.app
+com.tonedefapps.btw
 anim fragment_fast_out_extra_slow_in
 animator fragment_close_enter
 animator fragment_close_exit
@@ -254,6 +254,8 @@ layout notification_template_part_chronometer
 layout notification_template_part_time
 mipmap ic_launcher
 mipmap ic_launcher_round
+raw com_android_billingclient_heterodyne_info
+raw com_android_billingclient_registration_info
 string androidx_startup
 string app_name
 string call_notification_answer_action
@@ -403,5 +405,6 @@ styleable NavHost navGraph
 styleable NavInclude graph
 styleable Navigator android_label android_id route
 styleable SignInButton buttonSize colorScheme scopeUris
+xml com_android_billingclient_phenotype
 xml data_extraction_rules
 xml network_security_config
